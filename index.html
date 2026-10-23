@@ -110,7 +110,9 @@
 .inline-cost:hover,.inline-cost:focus-visible{background:#e8f5ef;outline:2px solid #68bfa6;outline-offset:2px}
 .inline-cost-input{width:120px;max-width:100%;padding:6px 8px;border:1px solid #176b59;border-radius:5px;background:white;color:#183e50;text-align:right;font-size:14px;box-sizing:border-box}
 .inline-cost-input[aria-invalid=true]{border-color:#b42318}
-.margin-settings{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px}.margin-settings>strong{font-size:14px}.margin-setting-fields{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px}.margin-setting-fields label{font-size:12px;color:#566874;display:flex;flex-direction:column;gap:5px}.margin-setting-fields label span{display:flex;align-items:center;gap:6px}.margin-setting-fields input{width:110px;border:1px solid #cdd9df;border-radius:6px;padding:6px 8px;color:#182b38}.margin-setting-fields input[aria-invalid=true]{border-color:#c73535}.margin-settings p{font-size:11px;color:#71818b;margin-top:10px}.metrics{grid-template-columns:repeat(5,minmax(0,1fr))}.margin-negative .metric-value{color:#b42318}.margin-column{width:230px!important;min-width:230px;vertical-align:top}.option-margin{padding:9px 0;border-bottom:1px solid #e3e9ed}.option-margin:last-child{border:0}.margin-option-label{font-size:11px;color:#617782;overflow-wrap:anywhere;line-height:1.5;margin-bottom:6px}.margin-badge{display:inline-block;border-radius:5px;padding:5px 7px;font-size:12px;font-weight:650;white-space:nowrap}.margin-badge.good{color:#176b59;background:#edf6f1}.margin-badge.warn{color:#9a5000;background:#fff0d6}.margin-badge.bad{color:#b42318;background:#fee9e7}.margin-badge.neutral{color:#6b7280;background:#eef0f2}.price-table{min-width:1580px!important}.price-table th:first-child{width:280px!important}.price-table th:nth-child(3),.price-table th:nth-child(4){width:410px!important}#tab-matched table{min-width:2410px}@media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.margin-settings{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px}.margin-settings>strong{font-size:14px}.margin-setting-fields{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px}.margin-setting-fields label{font-size:12px;color:#566874;display:flex;flex-direction:column;gap:5px}.margin-setting-fields label span{display:flex;align-items:center;gap:6px}.margin-setting-fields input{width:110px;border:1px solid #cdd9df;border-radius:6px;padding:6px 8px;color:#182b38}.margin-setting-fields input[aria-invalid=true]{border-color:#c73535}.margin-settings p{font-size:11px;color:#71818b;margin-top:10px}.metrics{grid-template-columns:repeat(5,minmax(0,1fr))}.margin-negative .metric-value{color:#b42318}.margin-column{width:230px!important;min-width:230px;vertical-align:top}.option-margin{padding:9px 0;border-bottom:1px solid #e3e9ed}.option-margin:last-child{border:0}.margin-option-label{font-size:11px;color:#617782;overflow-wrap:anywhere;line-height:1.5;margin-bottom:6px}.margin-badge{display:inline-block;border-radius:5px;padding:5px 7px;font-size:12px;font-weight:650;white-space:nowrap}.margin-badge.good{color:#176b59;background:#edf6f1}.margin-badge.warn{color:#9a5000;background:#fff0d6}.margin-badge.bad{color:#b42318;background:#fee9e7}.margin-badge.neutral{color:#6b7280;background:#eef0f2}#tab-matched table{min-width:2410px}@media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.card-margin{border-top:1px solid var(--line);margin-top:10px;padding-top:8px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}.card-margin-title{font-size:11px;color:#71818b}.card-margin .option-margin{padding:0;border:0}.card-margin .margin-option-label{display:none}
 
 </style>
 <script>/*!
@@ -2497,7 +2499,7 @@ function renderFilters(){
     byId('issueFilters').innerHTML=workspaceView==='review'?[['all','전체'],['missing','연결 누락'],['name','상품명 연결'],['below','역마진'],['orphan','SKU 없는 상품'],['excluded','판매 안 함']].map(([key,label])=>`<button class="${issueFilter===key?'active':''}" onclick="setIssueFilter('${key}')">${label}</button>`).join(''):'';
 }
 function setIssueFilter(filter){issueFilter=filter;currentPage.unmatched=1;renderFilters();renderAll();}
-function priceCell(items,channel,excluded){
+function priceCell(items,channel,excluded,sku=null){
     items=uniqueAdditionalRegistrations(items);
     if(!items.length)return `<div class="registration-empty">${excluded?'판매 안 함으로 설정':'연결된 등록 정보 없음'}</div>`;
     return `<div class="registration-count">연결 ${items.length.toLocaleString()}건</div><div class="registration-list">`+items.map(item=>{
@@ -2513,13 +2515,13 @@ function priceCell(items,channel,excluded){
         const thumbnailItem=extra?(item.__parentItem||item):item;
         const thumbnail=store&&/^https?:\/\//i.test(String(exactVal(thumbnailItem,C.storeImage)||'').trim())?storeThumbnailHtml(thumbnailItem):'';
         const title=thumbnail?'<div class="registration-title-row">'+thumbnail+'<div class="registration-name">'+esc(name||'등록 상품명 없음')+'</div></div>':'<div class="registration-name">'+esc(name||'등록 상품명 없음')+'</div>';
-        return `<div class="registration-item">${listingShopHtml(item,channel)}${!store&&coupangFulfillment(item)==='growth'?'<span class="rocket-growth-badge" title="바코드: '+esc(exactVal(item,C.coupangBarcode))+'">로켓그로스</span>':''}${extra?'<div class="registration-parent-name"><span>등록 페이지</span>'+esc(parentName||'상품명 없음')+'</div>':''}${title}<div class="registration-option">${extra?'추가상품 · ':''}${esc(option||'옵션 정보 없음')}</div><div class="registration-bottom"><span class="registration-id">상품 ${esc(id||'번호 없음')}${optionId?' · 옵션 '+esc(optionId):''}</span><strong class="registration-price">${price}</strong></div><div class="registration-shipping">배송비 · ${esc(shippingLabel(extra?(item.__parentItem||item):item,channel))}</div>${listingPriceHistoryHtml(item,channel)}</div>`;
+        return `<div class="registration-item">${listingShopHtml(item,channel)}${!store&&coupangFulfillment(item)==='growth'?'<span class="rocket-growth-badge" title="바코드: '+esc(exactVal(item,C.coupangBarcode))+'">로켓그로스</span>':''}${extra?'<div class="registration-parent-name"><span>등록 페이지</span>'+esc(parentName||'상품명 없음')+'</div>':''}${title}<div class="registration-option">${extra?'추가상품 · ':''}${esc(option||'옵션 정보 없음')}</div><div class="registration-bottom"><span class="registration-id">상품 ${esc(id||'번호 없음')}${optionId?' · 옵션 '+esc(optionId):''}</span><strong class="registration-price">${price}</strong></div><div class="registration-shipping">배송비 · ${esc(shippingLabel(extra?(item.__parentItem||item):item,channel))}</div>${cardMarginHtml(item,channel,sku)}${listingPriceHistoryHtml(item,channel)}</div>`;
     }).join('')+'</div>';
 }
 function channelRegistrationCell(group,channel,excluded){
     const items=channel==='store'?group.storeItems:group.coupangItems;
     const name=channel==='store'?'네이버':'쿠팡';
-    return '<div class="channel-add-row"><button type="button" class="text-action" aria-label="'+name+' 추가 연결" onclick="openAdditionalChannel(decodeURIComponent(\''+safeKey(group.key)+'\'),\''+channel+'\')">＋ 추가 연결</button></div>'+priceCell(items,channel,excluded);
+    return '<div class="channel-add-row"><button type="button" class="text-action" aria-label="'+name+' 추가 연결" onclick="openAdditionalChannel(decodeURIComponent(\''+safeKey(group.key)+'\'),\''+channel+'\')">＋ 추가 연결</button></div>'+priceCell(items,channel,excluded,group.skuItem);
 }
 function openAdditionalChannel(key,channel){
     openMissingChannel(key,channel);
@@ -3792,7 +3794,7 @@ function updateMarginSetting(input,key){
 function calculateOptionMargin(item,channel,sku){
     if(!item)return {status:'empty'};
     if(channel==='coupang'&&coupangFulfillment(item)==='growth')return {status:'growth'};
-    if(!sku||val(sku,C.skuCost)==='')return {status:'unknown',reason:'매입원가 없음'};
+    if(!sku||!(num(sku,C.skuCost)>0))return {status:'unknown',reason:'매입원가 없음'};
     const sale=channel==='store'?storeSalePrice(item):num(item,C.coupangPrice),cost=num(sku,C.skuCost);
     if(!(sale>0)||cost<0)return {status:'unknown',reason:'판매가·원가 확인 필요'};
     const parent=item.__isAdditionalProduct?(item.__parentItem||item):item;
@@ -3826,7 +3828,7 @@ function channelMarginsHtml(items,channel,sku){return items.length?uniqueAdditio
 function skuHasNegativeMargin(group){return ['store','coupang'].some(channel=>group[channel==='store'?'storeItems':'coupangItems'].some(item=>{const m=calculateOptionMargin(item,channel,group.skuItem);return m.status==='ok'&&m.amount<=0;}));}
 const marginBasePagedTable=renderPagedTable;
 renderPagedTable=function(options){
-    if(!['integrated','matched','unmatched'].includes(options.type))return marginBasePagedTable(options);
+    if(options.type!=='matched')return marginBasePagedTable(options);
     const rowHtml=options.rowHtml;
     return marginBasePagedTable({...options,colSpan:options.colSpan+2,rowHtml:row=>{
         const stores=row.storeItems||(row.storeItem?[row.storeItem]:[]),coupangs=row.coupangItems||(row.coupangItem?[row.coupangItem]:[]);
@@ -3841,7 +3843,12 @@ function setupMarginUI(){
     const fields=[['storeSale','네이버 판매 수수료','%'],['storeShipping','네이버 배송비 수수료','%'],['coupangSale','쿠팡 판매 수수료','%'],['coupangShipping','쿠팡 배송비 수수료','%'],['dispatch','실제 발송 택배비 원가','원']];
     document.querySelector('.metrics').insertAdjacentHTML('beforebegin','<section class="margin-settings" aria-label="예상 마진 계산 설정"><strong>마진 계산 설정</strong><div class="margin-setting-fields">'+fields.map(([key,label,unit])=>'<label>'+label+'<span><input aria-label="'+label+'" type="number" min="0" '+(unit==='%'?'max="100" step="0.01"':'step="1"')+' value="'+marginSettings[key]+'" oninput="updateMarginSetting(this,\''+key+'\')">'+unit+'</span></label>').join('')+'</div><p>옵션 1개 판매 기준 · 설정은 이 브라우저에 자동 저장 · 그로스 제외 · 배송비 또는 원가 정보가 없으면 계산 보류</p></section>');
     document.querySelector('.metrics').insertAdjacentHTML('beforeend','<div class="metric margin-negative"><div class="metric-label">역마진 주의 SKU</div><div class="metric-value" id="metricNegativeMargin">0</div><div class="metric-note">일반배송 마진 0원 이하 · SKU당 1건</div></div>');
-    for(const id of ['integrated','matched','unmatched'])document.querySelector('#tab-'+id+' thead tr').insertAdjacentHTML('beforeend','<th class="margin-column">네이버 마진액 / 마진율(%)</th><th class="margin-column">쿠팡 마진액 / 마진율(%)</th>');
+    for(const id of ['matched'])document.querySelector('#tab-'+id+' thead tr').insertAdjacentHTML('beforeend','<th class="margin-column">네이버 마진액 / 마진율(%)</th><th class="margin-column">쿠팡 마진액 / 마진율(%)</th>');
+}
+var marginUIReady=true;
+function cardMarginHtml(item,channel,sku){
+    if(!marginUIReady||!sku)return '';
+    return '<div class="card-margin"><span class="card-margin-title">예상 마진</span>'+optionMarginHtml(item,channel,sku)+'</div>';
 }
 setupMarginUI();
 
