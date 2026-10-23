@@ -116,6 +116,9 @@
 /* Keep product identity and all monetary information in two coherent groups. */
 .registration-list{container-type:inline-size}.registration-compact{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:14px!important}.registration-info{min-width:0}.registration-compact .registration-title-row{gap:12px;align-items:center}.registration-compact .registration-title-row>div:first-child{width:76px;height:76px}.registration-compact .registration-title-row>div:first-child img{width:100%;height:100%;max-height:none;object-fit:contain}.registration-compact .registration-name{font-size:14px;line-height:1.5}.registration-compact .registration-option{margin-top:8px}.registration-compact .registration-id{margin-top:8px;line-height:1.5}.registration-finance{min-width:0;background:#fff;border:1px solid #e0e8e5;border-radius:8px;padding:10px 12px;align-self:start}.registration-sale,.registration-finance .registration-shipping{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.registration-sale>span,.registration-finance .registration-shipping>span:first-child{font-size:11px;color:#71818b;flex:none}.registration-sale .registration-price{font-size:20px;line-height:1.35;margin:0}.registration-finance .registration-shipping{border:0;padding:0;margin-top:8px;font-size:11px;line-height:1.5}.registration-finance .registration-shipping>span:last-child{text-align:right}.registration-finance .card-margin{justify-content:space-between;margin-top:9px;padding-top:9px}.registration-finance .margin-badge{font-size:12px}.registration-finance .listing-history{margin-top:9px}.registration-compact .registration-parent-name{margin-bottom:9px}
 @container(min-width:540px){.registration-compact{grid-template-columns:minmax(0,1fr) 245px;gap:18px}.registration-compact .registration-title-row>div:first-child{width:88px;height:88px}}
+/* Independent, equally sized matching panes with persistent controls. */
+#manualDialog.manual-workspace:not([data-channel="store"]):not([data-channel="coupang"]){width:96vw;max-width:1800px;max-height:94vh}.manual-workspace .manual-search-grid{display:grid;grid-template-columns:minmax(230px,.75fr) minmax(300px,1.2fr) minmax(300px,1.2fr);align-items:stretch;gap:14px;padding:16px}.manual-workspace .manual-panel{display:flex;flex-direction:column;min-width:0;height:clamp(380px,61vh,760px);border:1px solid #dbe4e8;border-radius:10px;background:#fff;overflow:hidden;padding:12px 12px 0}.manual-workspace .manual-panel>label,.manual-workspace .manual-panel>input,.manual-workspace .manual-panel>p{flex:none}.manual-workspace .manual-panel>p{height:36px;overflow:auto;margin:8px 0;font-size:11px}.manual-workspace .manual-panel-results{flex:1;min-height:0;max-height:none!important;overflow:auto;overscroll-behavior:contain;margin-top:0}.manual-panel-footer{position:sticky;bottom:0;z-index:3;flex:none;background:#fff;padding:10px 0 12px;box-shadow:0 -6px 12px #183e5009;min-height:86px}.manual-bulk-actions{display:flex;gap:8px;margin-bottom:7px}.manual-bulk-actions button{font-size:11px;padding:5px 7px;border:1px solid #d1dedb;border-radius:5px;color:#176b59}.manual-panel-footer>button{width:100%;padding:9px 8px;font-size:12px}.manual-help{font-size:11px;line-height:1.6;color:#71818b;display:flex;align-items:center}.recommend-match{display:inline-block;background:#e3f4e9;color:#176b59;border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700}.manual-workspace .candidate-card{padding:10px}.manual-workspace .candidate-heading{font-size:12px}#manualDialog[data-channel="store"] .manual-panel,#manualDialog[data-channel="coupang"] .manual-panel{height:clamp(360px,55vh,700px)}
+@media(max-width:980px){.manual-workspace .manual-search-grid{grid-template-columns:230px 340px 340px;overflow-x:auto}}
 
 </style>
 <script>/*!
@@ -3339,7 +3342,7 @@ updateManualSelectionLabels=function(){
         const label=byId('manualSelected'+(channel==='store'?'Store':'Coupang'));
         if(count&&label)label.textContent=count+'개 선택됨';
         const button=document.querySelector?.('.manual-save-'+channel);
-        if(button)button.textContent=(channel==='store'?'네이버':'쿠팡')+' '+count+'개 연결 저장';
+        if(button)button.textContent='선택 '+count+'개 한 번에 연결(저장)';
     }
 };
 function toggleManualChecked(type,index,checked){
@@ -3413,7 +3416,7 @@ function candidateResults(type,term){
         return {entry:e,score,selected:manualChecked[type].has(e.key),reason:exact?'SKU 코드 일치':full?'상품명·옵션 포함':related?(coreHits?'상품명: '+matchedCore.join(' · '):'상품명 유사'):''};
     });
     if(sku&&!term&&mode!=='all')results=results.filter(r=>r.score>0);
-    if(sku)results.sort((a,b)=>Number(b.selected)-Number(a.selected)||b.score-a.score||a.entry.index-b.entry.index);
+    if(sku)results.sort((a,b)=>Number(candidateOwnership(type,a.entry.key).other)-Number(candidateOwnership(type,b.entry.key).other)||b.score-a.score||a.entry.index-b.entry.index);
     candidateQueries.set(type,{entries,sku,term,mode,results});return results;
 }
 function candidateOwnership(type,key){
@@ -3446,7 +3449,7 @@ renderManualSearch=function(type){
     manualSearchPages[type]=Math.max(1,Math.min(manualSearchPages[type]||1,pages));
     const start=(manualSearchPages[type]-1)*MANUAL_RESULT_PAGE_SIZE,shown=results.slice(start,start+MANUAL_RESULT_PAGE_SIZE);
     if(manualSelection[type]&&!manualChecked[type].size)manualChecked[type].set(manualSourceKey(type,manualSelection[type]),manualSelection[type]);
-    target.innerHTML=shown.map(({entry:e,reason})=>{
+    target.innerHTML=shown.map(({entry:e,reason,score})=>{
         const owner=candidateOwnership(type,e.key),store=type==='store';
         const raw=e.item.__isAdditionalProduct?e.item.__additionalProduct.price:val(e.item,store?C.storeFinalPrice:C.coupangPrice);
         const fallback=store?val(e.item,C.storePrice):raw;
@@ -3456,10 +3459,10 @@ renderManualSearch=function(type){
         const checked=manualChecked[type].has(e.key);
         const thumbnail=store&&/^https?:\/\//i.test(String(exactVal(e.item,C.storeImage)||'').trim())?storeThumbnailHtml(e.item):'';
         const heading=thumbnail?'<div class="candidate-product-row">'+thumbnail+'<span class="candidate-heading"><strong>'+esc(e.name||'상품명 없음')+'</strong><b>'+(price!==''&&price!=null?toNum(price).toLocaleString()+'원':'가격 정보 없음')+'</b></span></div>':'<span class="candidate-heading"><strong>'+esc(e.name||'상품명 없음')+'</strong><b>'+(price!==''&&price!=null?toNum(price).toLocaleString()+'원':'가격 정보 없음')+'</b></span>';
-        return '<label class="candidate-card '+(checked?'candidate-selected':'')+'"><span class="candidate-select"><input type="checkbox" aria-label="'+esc(e.name+' '+e.option)+' 선택" '+(checked?'checked':'')+' onchange="toggleManualChecked(\''+type+'\','+e.index+',this.checked)"> '+(checked?'<span class="candidate-connected-button">연결됨</span>':'선택')+'</span>'+
+        return '<label class="candidate-card '+(checked?'candidate-selected':'')+'"><span class="candidate-select"><input type="checkbox" aria-label="'+esc(e.name+' '+e.option)+' 선택" '+(checked?'checked':'')+' onchange="toggleManualChecked(\''+type+'\','+e.index+',this.checked)"> '+(owner.same?'<span class="candidate-connected-button">연결됨</span>':checked?'선택됨':'선택')+'</span>'+
             listingShopHtml(e.item,type)+heading+
             '<span>'+esc(e.option||'옵션 정보 없음')+'</span><small>상품 '+esc(id||'—')+' · 옵션 '+esc(optionId||'—')+'</small>'+
-            '<span class="candidate-badges">'+(reason?'<span class="candidate-reason">'+esc(reason)+'</span>':'')+(!store&&coupangFulfillment(e.item)==='growth'?'<span class="rocket-growth-badge">로켓그로스</span>':'')+'</span>'+
+            '<span class="candidate-badges">'+(score>0&&!owner.other?'<span class="recommend-match">추천 매칭</span>':'')+(reason?'<span class="candidate-reason">'+esc(reason)+'</span>':'')+(!store&&coupangFulfillment(e.item)==='growth'?'<span class="rocket-growth-badge">로켓그로스</span>':'')+'</span>'+
             '<span class="candidate-owner '+(owner.other?'candidate-other':'')+'">'+esc(owner.text)+(owner.same?' · 이 SKU에 연결됨':owner.other?' · 다른 SKU에 연결됨':'')+'</span></label>';
     }).join('')+(!results.length?'<p class="p-3">'+(manualSourceRows(type).length?'관련 상품이 없습니다. 상품명이나 상품번호로 검색해주세요.':'먼저 해당 엑셀을 업로드해주세요.')+'</p>':'')+manualSearchPagerHtml(type,results.length,start,shown.length,pages);
 };
@@ -3475,8 +3478,12 @@ chooseManual=function(type,index){
     baseCandidateChoose(type,index);
     if(type==='sku'){
         manualChecked={store:new Map(),coupang:new Map()};
-        manualSelection.store=null;manualSelection.coupang=null;updateManualSelectionLabels();
-        for(const channel of ['store','coupang']){manualSearchPages[channel]=1;renderManualSearch(channel);}
+        manualSelection.store=null;manualSelection.coupang=null;
+        manualInitiallyConnected={store:new Map(),coupang:new Map()};
+        manualInitialSkuKey=manualSelection.sku?manualSourceKey('sku',manualSelection.sku):'';
+        precheckConnectedChannelItems(manualInitialSkuKey);candidateQueries.clear();
+        updateManualSelectionLabels();
+        for(const channel of ['store','coupang']){byId('manualSearch'+(channel==='store'?'Store':'Coupang')).value='';manualSearchPages[channel]=1;renderManualSearch(channel);}
     }else renderManualSearch(type);
 };
 const rebuildCandidateIndexes=buildIntegrated;
@@ -3897,6 +3904,38 @@ function expandCoupangSiblingMatches(){
     integratedData.push(...additions);
     unmatchedData=integratedData.filter(row=>!row.supplementalMatch&&(!row.storeItem||!row.coupangItem));
 }
+
+function selectManualResults(channel,clear){
+    if(!manualSelection.sku){toast('먼저 왼쪽에서 SKU를 선택해주세요.');return;}
+    if(clear)manualChecked[channel].clear();
+    else{
+        const suffix=channel==='store'?'Store':'Coupang';
+        for(const {entry} of candidateResults(channel,normText(byId('manualSearch'+suffix).value))){
+            if(!candidateOwnership(channel,entry.key).other)manualChecked[channel].set(entry.key,entry.item);
+        }
+    }
+    manualSelection[channel]=[...manualChecked[channel].values()].at(-1)||null;
+    updateManualSelectionLabels();renderManualSearch(channel);
+}
+function setupManualWorkspace(){
+    const dialog=byId('manualDialog');dialog.classList.add('manual-workspace');
+    for(const suffix of ['Sku','Store','Coupang']){
+        const input=byId('manualSearch'+suffix),panel=input.parentElement;
+        panel.classList.add('manual-panel');
+        input.setAttribute('aria-label',suffix==='Sku'?'SKU 개별 검색':suffix==='Store'?'네이버 개별 검색':'쿠팡 개별 검색');
+        byId('manualResults'+suffix).classList.add('manual-panel-results');
+        if(suffix==='Sku'){
+            panel.insertAdjacentHTML('beforeend','<div class="manual-panel-footer manual-help">SKU를 선택하면 상품명·옵션 유사도 순으로 추천합니다.</div>');continue;
+        }
+        const channel=suffix==='Store'?'store':'coupang',save=document.querySelector('.manual-save-'+channel);
+        const footer=document.createElement('div');footer.className='manual-panel-footer';
+        footer.innerHTML='<div class="manual-bulk-actions"><button type="button" title="현재 검색 결과 전체를 선택합니다. 다른 SKU에 연결된 항목은 제외합니다." onclick="selectManualResults(\''+channel+'\',false)">검색 결과 전체 선택</button><button type="button" onclick="selectManualResults(\''+channel+'\',true)">선택 전체 해제</button></div>';
+        footer.append(save);panel.append(footer);
+    }
+    const intro=document.querySelector('.manual-intro p');if(intro)intro.textContent='SKU 선택 → 추천 상품 확인 → 여러 항목 체크 후 채널별로 한 번에 저장하세요.';
+    const tabs=byId('sourceTabs');tabs.insertAdjacentHTML('beforeend','<button class="ui-btn" onclick="openManual(\'\')">수동 매칭</button>');
+}
+setupManualWorkspace();
 
 renderAll();
 updateSummary();
