@@ -329,6 +329,7 @@ let activeTab = 'integrated';
 let searchTerm = '';
 let searchTimer = null;
 let currentPage = createPageState();
+const quickMatchFilters=new Set();
 let coupangView = 'all';
 let sortState = {};
 let manualSearchPages = { sku: 1, store: 1, coupang: 1 };
@@ -3700,7 +3701,6 @@ setupCloud();
 
 
 // Status chips combine with search; selected status conditions use AND semantics.
-const quickMatchFilters=new Set();
 const quickMatchLabels=[['complete','양쪽 매칭 완료'],['noStore','네이버 미매칭'],['noCoupang','쿠팡 미매칭'],['manual','수동 매칭됨']];
 function toggleQuickMatchFilter(key){
     if(key==='all')quickMatchFilters.clear();
