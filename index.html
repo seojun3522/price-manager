@@ -1448,6 +1448,7 @@ function buildIntegrated() {
         });
     });
     applyManualMatches();
+    expandCoupangSiblingMatches();
     buildIntegratedSummary();
 }
 
@@ -3855,6 +3856,47 @@ function cardMarginHtml(item,channel,sku){
     return '<div class="card-margin"><span class="card-margin-title">예상 마진</span>'+optionMarginHtml(item,channel,sku)+'</div>';
 }
 setupMarginUI();
+
+// Derive sibling connections from existing SKU links; never overwrite manual decisions.
+function coupangSiblingSignature(item){
+    if(!item)return '';
+    const product=String(val(item,C.coupangProductId)||'').trim();
+    const listing=String(val(item,C.coupangId)||'').trim();
+    const option=String(val(item,C.coupangOptionName)||'').normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase();
+    if((!product&&!listing)||!option)return '';
+    return JSON.stringify([product?'product':'listing',product||listing,option]);
+}
+function expandCoupangSiblingMatches(){
+    const anchors=new Map(),linked=new Set(),blocked=new Set();
+    for(const match of manualMatches)if(match.disconnected&&match.coupangKey)blocked.add(match.coupangKey);
+    for(const row of integratedData){
+        if(!row.skuItem||!row.coupangItem)continue;
+        const itemKey=manualSourceKey('coupang',row.coupangItem);linked.add(itemKey);
+        const signature=coupangSiblingSignature(row.coupangItem);if(!signature)continue;
+        if(!anchors.has(signature))anchors.set(signature,new Map());
+        anchors.get(signature).set(manualSourceKey('sku',row.skuItem),row);
+    }
+    const additions=[],attached=new Set();
+    for(const item of rawCoupangData){
+        const key=manualSourceKey('coupang',item);
+        if(linked.has(key)||blocked.has(key)||attached.has(key))continue;
+        const owners=anchors.get(coupangSiblingSignature(item));
+        if(!owners||owners.size!==1)continue;
+        const base=owners.values().next().value;
+        const row={...base,supplementalMatch:true};
+        setStoreOnIntegratedRow(row,null,'미연동');
+        setCoupangOnIntegratedRow(row,item,'동일 상품·옵션');
+        additions.push(row);attached.add(key);
+    }
+    if(!additions.length)return;
+    integratedData=integratedData.filter(row=>{
+        if(row.skuItem||!row.coupangItem||!attached.has(manualSourceKey('coupang',row.coupangItem)))return true;
+        if(!row.storeItem)return false;
+        setCoupangOnIntegratedRow(row,null,'미연동');return true;
+    });
+    integratedData.push(...additions);
+    unmatchedData=integratedData.filter(row=>!row.supplementalMatch&&(!row.storeItem||!row.coupangItem));
+}
 
 renderAll();
 updateSummary();
