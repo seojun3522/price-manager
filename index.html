@@ -1450,6 +1450,7 @@ function buildIntegrated() {
             coupangType: '단독 목록'
         });
     });
+    captureManualAutomaticBaseline();
     applyManualMatches();
     expandCoupangSiblingMatches();
     buildIntegratedSummary();
@@ -1795,7 +1796,7 @@ async function saveManualMatch(channel) {
     } finally {
         manualSavePending = false;
     }
-    buildIntegrated();
+    refreshManualAssignments();
     updateSummary();
     renderAll();
     notice.remove();
@@ -1813,7 +1814,7 @@ async function deleteManualMatch(index) {
     try { await saveManualData(previousMatches); }
     catch (err) { manualMatches = previousMatches; toast('연결 해제 저장 실패 · '+cloudError(err)); return; }
     finally { manualSavePending = false; }
-    buildIntegrated();
+    refreshManualAssignments();
     renderManual();
     updateSummary();
     toast('수동 매칭을 해제했습니다.');
@@ -3936,6 +3937,24 @@ function setupManualWorkspace(){
     const tabs=byId('sourceTabs');tabs.insertAdjacentHTML('beforeend','<button class="ui-btn" onclick="openManual(\'\')">수동 매칭</button>');
 }
 setupManualWorkspace();
+
+// A manual edit changes assignments, not the imported product matching inputs.
+// Retain the automatic baseline so unlink/move restores the same result as a full build.
+var manualAutomaticBaseline;
+function captureManualAutomaticBaseline(){
+    manualAutomaticBaseline={sku:rawSkuData,store:rawStoreData,coupang:rawCoupangData,counts:[rawSkuData.length,rawStoreData.length,rawCoupangData.length],rows:integratedData.map(row=>({...row}))};
+}
+function refreshManualAssignments(){
+    const base=manualAutomaticBaseline;
+    if(!base||base.sku!==rawSkuData||base.store!==rawStoreData||base.coupang!==rawCoupangData||base.counts.some((n,i)=>n!==[rawSkuData.length,rawStoreData.length,rawCoupangData.length][i]))return buildIntegrated();
+    integratedData=base.rows.map(row=>({...row}));
+    applyManualMatches();
+    expandCoupangSiblingMatches();
+    unmatchedData=integratedData.filter(row=>!row.supplementalMatch&&(!row.storeItem||!row.coupangItem));
+    buildIntegratedSummary();
+    manualTextIndex=new WeakMap();tableTextIndex=new WeakMap();pendingManualRows=null;
+    candidateQueries.clear();candidateOwners=null;
+}
 
 renderAll();
 updateSummary();
