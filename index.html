@@ -866,10 +866,12 @@ function additionalProductHtml(item) {
 }
 
 function storeThumbnailHtml(item) {
-    const url = String(exactVal(item, C.storeImage) || '').trim();
+    const url = String(exactVal(item, C.storeImage) || '').trim()
+        .replace(/^https?:\/\/shop\d*\.phinf\.naver\.net\//i, 'https://shop-phinf.pstatic.net/')
+        .replace(/^http:\/\//i, 'https://');
     if (!/^https?:\/\//i.test(url)) return '<span class="text-xs text-gray-400">없음</span>';
     return '<div class="relative w-12 h-12 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">' +
-        '<img src="' + esc(url) + '" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.classList.add(\'hidden\');this.nextElementSibling.classList.remove(\'hidden\')">' +
+        '<img src="' + esc(url) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.classList.add(\'hidden\');this.nextElementSibling.classList.remove(\'hidden\')">' +
         '<span class="hidden flex absolute inset-0 items-center justify-center text-[10px] text-gray-400">없음</span></div>';
 }
 
