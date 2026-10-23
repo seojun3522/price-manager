@@ -96,6 +96,20 @@
  .dialog-head{padding:12px 20px}
  .dialog-head h2{font-size:16px}
 }
+/* Scroll within each data grid so sticky headers work in both directions. */
+.table-wrap:has(table){max-height:72vh;overflow:auto;position:relative;isolation:isolate}
+.table-wrap table{border-collapse:separate;border-spacing:0}
+.table-wrap thead{position:sticky;top:0;z-index:5;background:#f8fafb}
+.table-wrap thead th{background:#f8fafb;box-shadow:inset 0 -1px #dbe3e8}
+#tab-matched table{table-layout:fixed;min-width:1950px}
+#tab-matched th:first-child,#tab-matched td:first-child{position:sticky;left:0;width:180px;min-width:180px;max-width:180px;background:#fff;z-index:2;overflow-wrap:anywhere}
+#tab-matched th:nth-child(2),#tab-matched td:nth-child(2){position:sticky;left:180px;width:260px;min-width:260px;max-width:260px;background:#fff;z-index:2;overflow-wrap:anywhere;box-shadow:3px 0 5px #182b3810}
+#tab-matched thead th:first-child,#tab-matched thead th:nth-child(2){background:#f8fafb;z-index:6}
+.quick-match-filters{display:flex;gap:7px;flex-wrap:wrap}
+.inline-cost{cursor:text;border-bottom:1px dashed #789b91;border-radius:3px;padding:3px 2px;display:inline-block}
+.inline-cost:hover,.inline-cost:focus-visible{background:#e8f5ef;outline:2px solid #68bfa6;outline-offset:2px}
+.inline-cost-input{width:120px;max-width:100%;padding:6px 8px;border:1px solid #176b59;border-radius:5px;background:white;color:#183e50;text-align:right;font-size:14px;box-sizing:border-box}
+.inline-cost-input[aria-invalid=true]{border-color:#b42318}
 
 </style>
 <script>/*!
@@ -1881,7 +1895,7 @@ function renderMatched() {
         rowHtml: row => '<tr class="hover:bg-gray-50 search-row">' +
         '<td class="p-3 font-mono text-indigo-600 font-medium">' + esc(row.skuCode) + '</td>' +
         '<td class="p-3 font-medium">' + esc(row.skuName) + '</td>' +
-        '<td class="p-3 text-right font-semibold text-red-600">' + won(row.cost) + '</td>' +
+        '<td class="p-3 text-right font-semibold text-red-600">' + inlineCostHtml(row.skuItem) + '</td>' +
         '<td class="p-3 text-right font-semibold text-blue-600">' + won(row.storePrice) + '</td>' +
         '<td class="p-3 font-mono text-gray-500">' + esc(row.storeId || '-') + '</td>' +
         '<td class="p-3 font-mono text-gray-500">' + esc(row.storeOptionId || '-') + '</td>' +
@@ -1908,7 +1922,7 @@ function renderUnmatched() {
         return '<tr class="hover:bg-gray-50 search-row">' +
             '<td class="p-3 font-mono text-indigo-600 font-medium">' + esc(row.skuCode) + '</td>' +
             '<td class="p-3 font-medium">' + esc(row.skuName) + '</td>' +
-            '<td class="p-3 text-right font-semibold text-red-600">' + won(row.cost) + '</td>' +
+            '<td class="p-3 text-right font-semibold text-red-600">' + inlineCostHtml(row.skuItem) + '</td>' +
             '<td class="p-3 text-center">' + badge(row.storeType) + '</td>' +
             '<td class="p-3 text-center">' + badge(row.coupangType) + '</td>' +
             '<td class="p-3 text-gray-600">' + esc(memo.trim()) + '</td>' +
@@ -2109,7 +2123,7 @@ function renderPagedTable({ type, rows, tbodyId, countId, colSpan, emptyMessage,
         ? pageRows.map(rowHtml).join('')
         : '<tr><td colspan="' + colSpan + '" class="p-8 text-center text-gray-400">' + esc(noRowsMessage) + '</td></tr>';
 
-    const isFiltered = searchTerm || (type === 'coupang' && coupangView !== 'all');
+    const isFiltered = searchTerm || (type === 'coupang' && coupangView !== 'all') || (['integrated','matched','unmatched'].includes(type) && quickMatchFilters.size);
     const countText = isFiltered
         ? '표시 ' + filtered.length.toLocaleString() + '개 / 전체 ' + rows.length.toLocaleString() + '개'
         : '총 ' + rows.length.toLocaleString() + '개';
@@ -2123,7 +2137,7 @@ function filterRows(type, rows) {
         filtered = filtered.filter(row => coupangFulfillment(row) === coupangView);
     }
     if (!searchTerm) return filtered;
-    return filtered.filter(row => searchableText(type, row).includes(searchTerm));
+    return filtered.filter(row => searchTerm.split(/\s+/).filter(Boolean).every(term=>searchableText(type, row).includes(term)));
 }
 
 function coupangFulfillment(item) {
@@ -2156,7 +2170,7 @@ function searchableText(type, row) {
     return [
         row.dbCode, row.skuCode, row.skuName, row.storeId, row.storeOptionId,
         row.storeOptionLabel, row.storeOptionValue, row.storeAdditionalProducts, row.storePrice,
-        row.coupangId, row.coupangProductId, row.coupangOptionId, row.coupangPrice, row.storeType, row.coupangType
+        row.coupangId, row.coupangProductId, row.coupangOptionId, row.coupangPrice, row.storeType, row.coupangType, row.coupangItem && val(row.coupangItem,C.coupangOptionName), row.coupangItem && val(row.coupangItem,C.coupangDisplayName)
     ].map(v => String(v || '')).join(' ').toLowerCase();
 }
 
@@ -2516,7 +2530,7 @@ integratedSummaryRowHtml=function(group){
     const status=issues.length?issues.map(issue=>issue.type==='missing'?`<button type="button" class="status-pill warn connect-missing" title="${issue.text.startsWith('네이버')?'네이버':'쿠팡'} 상품 검색 후 연결" onclick="openMissingChannel(decodeURIComponent('${safeKey(group.key)}'),'${issue.text.startsWith('네이버')?'store':'coupang'}')">${issue.text} <span aria-hidden="true">＋</span></button>`:`<span class="status-pill ${issue.type==='below'?'bad':'warn'}">${issue.text}</span>`).join(''):'<span class="status-pill">확인 완료</span>';
     const excluded=(!group.hasStore&&p.noStore)||(!group.hasCoupang&&p.noCoupang);
     const actions=`<div class="product-row-actions">${status}${excluded?'<span class="status-pill neutral">미판매 채널 제외</span>':''}<button class="text-action" onclick="openDetail(decodeURIComponent('${safeKey(group.key)}'))">상세 · 수정</button></div>`;
-    const cost=`<div class="product-cost"><span>매입원가</span><strong>${won(group.cost)}</strong></div>${costHistoryHtml(group.skuItem)}`;
+    const cost=`<div class="product-cost"><span>매입원가</span><strong>${inlineCostHtml(group.skuItem)}</strong></div>${costHistoryHtml(group.skuItem)}`;
     return `<tr class="hover:bg-gray-50"><td><div class="product-title">${esc(group.skuName||'상품명 없음')}</div><div class="product-code">${esc(group.skuCode||'SKU 없음')}</div>${actions}${cost}</td><td></td><td>${channelRegistrationCell(group,'store',p.noStore)}</td><td>${channelRegistrationCell(group,'coupang',p.noCoupang)}</td><td></td><td></td></tr>`;
 };
 const legacyRenderIntegrated=renderIntegrated;
@@ -2570,6 +2584,7 @@ const legacyProcess=processData;
 processData=async function(){if(typeof XLSX==='undefined'){toast('엑셀 기능을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');return;}await legacyProcess();byId('runBtn').textContent='불러오기 및 자동 연결';if(integratedSummaryData.length)byId('importPanel').open=false;};
 saveLocalData=async function(){const at=await legacySave();byId('importHint').textContent='최근 저장 '+new Date(at).toLocaleString('ko-KR');return at;};
 setupWorkspace();
+
 
 
 
@@ -3684,10 +3699,84 @@ function setupCloud(){document.querySelector('.workspace').insertAdjacentHTML('a
 setupCloud();
 
 
+// Status chips combine with search; selected status conditions use AND semantics.
+const quickMatchFilters=new Set();
+const quickMatchLabels=[['complete','양쪽 매칭 완료'],['noStore','네이버 미매칭'],['noCoupang','쿠팡 미매칭'],['manual','수동 매칭됨']];
+function toggleQuickMatchFilter(key){
+    if(key==='all')quickMatchFilters.clear();
+    else if(quickMatchFilters.has(key))quickMatchFilters.delete(key);
+    else {
+        if(key==='complete'){quickMatchFilters.delete('noStore');quickMatchFilters.delete('noCoupang');}
+        if(key==='noStore'||key==='noCoupang')quickMatchFilters.delete('complete');
+        quickMatchFilters.add(key);
+    }
+    currentPage.integrated=1;currentPage.matched=1;currentPage.unmatched=1;
+    renderFilters();renderAll();
+}
+const renderIssueFilters=renderFilters;
+renderFilters=function(){
+    renderIssueFilters();
+    if(!['integrated','matched','unmatched'].includes(activeTab))return;
+    byId('issueFilters').insertAdjacentHTML('afterbegin','<div class="quick-match-filters" role="group" aria-label="매칭 상태 필터">'+[['all','전체'],...quickMatchLabels].map(([key,label])=>{
+        const on=key==='all'?!quickMatchFilters.size:quickMatchFilters.has(key);
+        return '<button type="button" aria-pressed="'+on+'" class="'+(on?'active':'')+'" onclick="toggleQuickMatchFilter(\''+key+'\')">'+label+'</button>';
+    }).join('')+'</div>');
+};
+const filterBeforeQuickMatch=filterRows;
+filterRows=function(type,rows){
+    let result=filterBeforeQuickMatch(type,rows);
+    if(!quickMatchFilters.size||!['integrated','matched','unmatched'].includes(type))return result;
+    const manualSkus=new Set(manualMatches.filter(m=>!m.disconnected).map(m=>m.skuKey));
+    const groups=new Map(integratedSummaryData.filter(g=>g.skuItem).map(g=>[manualSourceKey('sku',g.skuItem),g]));
+    return result.filter(row=>{
+        const key=row.skuItem?manualSourceKey('sku',row.skuItem):'',group=groups.get(key)||row;
+        const store=group.hasStore??!!group.storeItem,coupang=group.hasCoupang??!!group.coupangItem;
+        return [...quickMatchFilters].every(f=>f==='complete'?store&&coupang:f==='noStore'?!store:f==='noCoupang'?!coupang:manualSkus.has(key));
+    });
+};
+function inlineCostHtml(item){
+    if(!item)return '—';
+    return '<span class="inline-cost" tabindex="0" role="button" title="더블클릭 또는 Enter로 원가 수정" aria-label="매입원가 수정" data-cost-key="'+esc(encodeURIComponent(manualSourceKey('sku',item)))+'" ondblclick="beginInlineCost(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();beginInlineCost(this)}">'+won(num(item,C.skuCost))+'</span>';
+}
+let costSavePending=false;
+function beginInlineCost(host){
+    if(host.querySelector('input'))return;
+    if(costSavePending||manualSavePending){toast('저장 중입니다. 잠시 후 수정해주세요.');return;}
+    const item=manualSourceByKey('sku',decodeURIComponent(host.dataset.costKey));if(!item)return;
+    const original=host.innerHTML,input=document.createElement('input');
+    input.type='text';input.inputMode='decimal';input.className='inline-cost-input';input.value=String(num(item,C.skuCost));input.setAttribute('aria-label','매입원가');
+    host.replaceChildren(input);let finished=false;
+    const cancel=()=>{finished=true;host.innerHTML=original;host.focus();};
+    const commit=async()=>{
+        if(finished)return;
+        const text=input.value.trim().replace(/,/g,'');
+        if(!/^\d+(?:\.\d+)?$/.test(text)||!Number.isFinite(Number(text))){input.setAttribute('aria-invalid','true');toast('원가는 0 이상의 숫자로 입력해주세요.');input.focus();return;}
+        finished=true;const price=Number(text);
+        if(price===num(item,C.skuCost)){host.innerHTML=original;return;}
+        const before=JSON.parse(JSON.stringify(item));
+        costSavePending=true;manualSavePending=true;
+        item[existingField(item,C.skuCost,'매입원가')]=price;recordCostHistory([item],[before]);
+        buildIntegrated();renderAll();updateSummary();toast('원가 저장 중…');
+        try{await saveLocalData();toast('원가가 저장되었습니다.');}
+        catch(error){for(const k of Object.keys(item))delete item[k];Object.assign(item,before);buildIntegrated();renderAll();updateSummary();toast('원가 저장 실패 · 이전 금액으로 복구했습니다. '+cloudError(error));}
+        finally{costSavePending=false;manualSavePending=false;}
+    };
+    input.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Escape'){event.preventDefault();cancel();}if(event.key==='Enter'){event.preventDefault();commit();}});
+    input.addEventListener('blur',commit);input.focus();input.select();
+}
+function setupTableUsability(){
+    byId('searchInput').placeholder='SKU · 상품명 · 옵션명 · 상품번호 검색';
+    byId('searchInput').setAttribute('aria-label','상품 검색 (공백으로 조건 추가)');
+    byId('sourceTabs').insertAdjacentHTML('beforeend','<button class="ui-btn" data-source="matched" onclick="switchTab(\'matched\')">SKU 기준 매칭 현황</button>');
+    renderFilters();
+}
+setupTableUsability();
+
 renderAll();
 updateSummary();
 restoreLocalData();
 </script>
 </body>
 </html>
+
 
