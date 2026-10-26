@@ -119,6 +119,7 @@
 /* Independent, equally sized matching panes with persistent controls. */
 #manualDialog.manual-workspace:not([data-channel="store"]):not([data-channel="coupang"]){width:96vw;max-width:1800px;max-height:94vh}.manual-workspace .manual-search-grid{display:grid;grid-template-columns:minmax(230px,.75fr) minmax(300px,1.2fr) minmax(300px,1.2fr);align-items:stretch;gap:14px;padding:16px}.manual-workspace .manual-panel{display:flex;flex-direction:column;min-width:0;height:clamp(380px,61vh,760px);border:1px solid #dbe4e8;border-radius:10px;background:#fff;overflow:hidden;padding:12px 12px 0}.manual-workspace .manual-panel>label,.manual-workspace .manual-panel>input,.manual-workspace .manual-panel>p{flex:none}.manual-workspace .manual-panel>p{height:36px;overflow:auto;margin:8px 0;font-size:11px}.manual-workspace .manual-panel-results{flex:1;min-height:0;max-height:none!important;overflow:auto;overscroll-behavior:contain;margin-top:0}.manual-panel-footer{position:sticky;bottom:0;z-index:3;flex:none;background:#fff;padding:10px 0 12px;box-shadow:0 -6px 12px #183e5009;min-height:86px}.manual-bulk-actions{display:flex;gap:8px;margin-bottom:7px}.manual-bulk-actions button{font-size:11px;padding:5px 7px;border:1px solid #d1dedb;border-radius:5px;color:#176b59}.manual-panel-footer>button{width:100%;padding:9px 8px;font-size:12px}.manual-help{font-size:11px;line-height:1.6;color:#71818b;display:flex;align-items:center}.recommend-match{display:inline-block;background:#e3f4e9;color:#176b59;border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700}.manual-workspace .candidate-card{padding:10px}.manual-workspace .candidate-heading{font-size:12px}#manualDialog[data-channel="store"] .manual-panel,#manualDialog[data-channel="coupang"] .manual-panel{height:clamp(360px,55vh,700px)}
 @media(max-width:980px){.manual-workspace .manual-search-grid{grid-template-columns:230px 340px 340px;overflow-x:auto}}
+#settingsDialog{width:min(660px,94vw);max-height:90vh}.naver-store-settings{border-bottom:1px solid var(--line);margin-bottom:24px;padding-bottom:20px}.naver-store-settings h3{font-weight:700;font-size:17px}.naver-store-settings p{font-size:12px;color:#71818b;line-height:1.6;margin:8px 0}.naver-store-settings label{display:block;font-size:12px;margin:12px 0}.naver-store-settings input{display:block;width:100%;margin-top:5px;border:1px solid #cdd9df;border-radius:6px;padding:8px}.store-config-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #edf0f2}.store-config-row small{display:block;color:#71818b;font-size:11px}.store-config-row strong{font-size:13px}
 
 </style>
 <script>/*!
@@ -3075,7 +3076,7 @@ async function handleUnifiedUpload(files){
 function setupUnifiedImport(){
     const panel=byId('importPanel'),old=panel.querySelector('section'),status=byId('bulkImportStatus');
     old.classList.add('hidden');
-    const area=document.createElement('div');area.className='unified-upload';area.innerHTML='<input id="unifiedFiles" type="file" accept=".xlsx,.xls" multiple hidden><button id="chooseUnified" class="ui-btn primary" type="button">엑셀 파일 선택</button><p>파일 종류를 고를 필요 없이 여러 파일을 한 번에 선택하세요. 선택하면 자동으로 분류해 반영합니다.</p><small>원가표 · 네이버 · 쿠팡 · 주문 매핑 이력 · 로켓그로스 바코드 · 수정한 매칭 엑셀</small><p class="unified-help">파일명에 스토어명만 포함하세요. 네이버는 제커·헬로우캠핑, 쿠팡은 마당발·서준으로 인식합니다. 띄어쓰기·날짜·순서는 자유입니다. 소속이 불분명하면 기존 소속을 유지하고 새 상품은 미지정으로 표시합니다. 상품번호·옵션번호가 같은 항목만 갱신하며 파일에 없는 상품은 유지합니다. 주문 이력은 상품번호·옵션·SKU가 명확히 일치하는 연결에 활용하고, 저장한 수동 연결은 유지합니다.</p>';
+    const area=document.createElement('div');area.className='unified-upload';area.innerHTML='<input id="unifiedFiles" type="file" accept=".xlsx,.xls" multiple hidden><button id="chooseUnified" class="ui-btn primary" type="button">엑셀 파일 선택</button><p>파일 종류를 고를 필요 없이 여러 파일을 한 번에 선택하세요. 선택하면 자동으로 분류해 반영합니다.</p><small>원가표 · 네이버 · 쿠팡 · 주문 매핑 이력 · 로켓그로스 바코드 · 수정한 매칭 엑셀</small><p class="unified-help">파일명에 스토어명만 포함하세요. 네이버 스토어는 상단 설정 → 스마트스토어 관리에서 개수 제한 없이 등록하세요. 파일명에 등록한 스토어명 또는 키워드를 넣으면 인식합니다. 쿠팡은 마당발·서준으로 인식합니다. 띄어쓰기·날짜·순서는 자유입니다. 소속이 불분명하면 기존 소속을 유지하고 새 상품은 미지정으로 표시합니다. 상품번호·옵션번호가 같은 항목만 갱신하며 파일에 없는 상품은 유지합니다. 주문 이력은 상품번호·옵션·SKU가 명확히 일치하는 연결에 활용하고, 저장한 수동 연결은 유지합니다.</p>';
     panel.append(area);area.append(status);
     byId('unifiedFiles').addEventListener('change',event=>handleUnifiedUpload(event.target.files));
     byId('chooseUnified').addEventListener('click',()=>byId('unifiedFiles').click());
@@ -3093,7 +3094,7 @@ setupUnifiedImport();
     function setSheetCell(sheet,row,column,value){if(column<0||value===''||value===undefined||value===null)return false;const address=XLSX.utils.encode_cell({r:row,c:column}),previous=sheet[address]||{};sheet[address]={...previous,t:typeof value==='number'?'n':'s',v:value,w:String(value)};return true;}
     function firstValue(item,names){if(!item)return '';const key=Object.keys(item).find(key=>names.some(name=>normKey(key)===normKey(name))&&asText(item[key]));return key?item[key]:'';}
     function itemsForSku(sku){const skuKey=manualSourceKey('sku',sku),rows=integratedData.filter(row=>row.skuItem&&manualSourceKey('sku',row.skuItem)===skuKey);return {store:[...new Set(rows.map(row=>row.storeItem).filter(Boolean))],coupang:[...new Set(rows.map(row=>row.coupangItem).filter(Boolean))]};}
-    function listingUrl(item,channel){if(!item)return '';const direct=asText(firstValue(item,explicitLinkFields));if(/^https?:\/\//i.test(direct))return direct;if(channel==='store'){const product=asText(exactVal(item,C.storeId)),shop=asText((item.__parentItem||item).__shopName),seller={제커:'madangval7',헬로우캠핑:'hellocampingplus'}[shop];return product&&seller?'https://smartstore.naver.com/'+seller+'/products/'+encodeURIComponent(product):'';}const product=asText(exactVal(item,C.coupangProductId)),option=asText(exactVal(item,C.coupangOptionId));return product?'https://www.coupang.com/vp/products/'+encodeURIComponent(product)+(option?'?vendorItemId='+encodeURIComponent(option):''):'';}
+    function listingUrl(item,channel){if(!item)return '';const direct=asText(firstValue(item,explicitLinkFields));if(/^https?:\/\//i.test(direct))return direct;if(channel==='store'){const product=asText(exactVal(item,C.storeId)),shop=asText((item.__parentItem||item).__shopName),seller=naverUrlId(shop);return product&&seller?'https://smartstore.naver.com/'+seller+'/products/'+encodeURIComponent(product):'';}const product=asText(exactVal(item,C.coupangProductId)),option=asText(exactVal(item,C.coupangOptionId));return product?'https://www.coupang.com/vp/products/'+encodeURIComponent(product)+(option?'?vendorItemId='+encodeURIComponent(option):''):'';}
     function proposalValues(sku){
         const listings=itemsForSku(sku);
         const stores=listings.store.filter(item=>storeSalePrice(item)>0).sort((a,b)=>storeSalePrice(a)-storeSalePrice(b));
@@ -3497,7 +3498,7 @@ function shopNameFromFilename(filename,knownNames,channel){
     const known=[...new Set(knownNames||[...rawStoreData,...rawCoupangData].map(r=>r.__shopName).filter(Boolean))];
     const normalized=normText(stem);
     if(CHANNEL_SHOPS[channel]){
-        const matches=Object.entries(CHANNEL_SHOPS[channel]).filter(([name,aliases])=>aliases.some(alias=>normalized.includes(normText(alias))));
+        const matches=(channel==='store'?naverStoreRegistry().map(s=>[s.name,s.aliases]):Object.entries(CHANNEL_SHOPS[channel])).filter(([name,aliases])=>aliases.some(alias=>normalized.includes(normText(alias))));
         return matches.length===1?matches[0][0]:'';
     }
     let found=known.filter(name=>normText(name).length>=2&&normalized.includes(normText(name)));
@@ -3955,6 +3956,55 @@ function refreshManualAssignments(){
     manualTextIndex=new WeakMap();tableTextIndex=new WeakMap();pendingManualRows=null;
     candidateQueries.clear();candidateOwners=null;
 }
+
+// Shared store registry is stored with existing workspace preferences.
+function naverStoreRegistry(){
+    const map=new Map(Object.entries(CHANNEL_SHOPS.store).map(([name,aliases])=>[name,{name,aliases,urlId:name==='제커'?'madangval7':'hellocampingplus',sellerIds:name==='제커'?['ncp_1nrcs0_01']:['jaemanboys']} ]));
+    for(const row of rawStoreData||[])if(row.__shopName&&!map.has(row.__shopName))map.set(row.__shopName,{name:row.__shopName,aliases:[row.__shopName],urlId:'',sellerIds:[]});
+    for(const item of reviewPreferences.__naverStores||[])if(item&&typeof item.name==='string'&&item.name.trim())map.set(item.name,{name:item.name,aliases:[item.name,...(Array.isArray(item.aliases)?item.aliases:[])],urlId:item.urlId||'',sellerIds:Array.isArray(item.sellerIds)?item.sellerIds:[]});
+    return [...map.values()];
+}
+function naverUrlId(name){return naverStoreRegistry().find(s=>s.name===name)?.urlId||'';}
+function renderNaverStoreSettings(){
+    const target=byId('naverStoreRegistryList');if(!target)return;
+    target.innerHTML=naverStoreRegistry().map(s=>'<div class="store-config-row"><div><strong>'+esc(s.name)+'</strong><small>파일명: '+esc([...new Set(s.aliases)].join(', '))+'</small></div><button class="ui-btn" type="button" data-store="'+esc(s.name)+'" onclick="editNaverStore(this.dataset.store)">설정</button></div>').join('');
+}
+function editNaverStore(name){
+    const s=naverStoreRegistry().find(s=>s.name===name);if(!s)return;
+    byId('naverStoreName').value=s.name;byId('naverStoreAliases').value=s.aliases.filter(a=>a!==s.name).join(', ');byId('naverStoreUrlId').value=s.urlId;byId('naverStoreSellerIds').value=s.sellerIds.join(', ');
+}
+let naverStoreSavePending=false;
+async function saveNaverStoreSetting(){
+    if(naverStoreSavePending)return;
+    const name=byId('naverStoreName').value.trim();
+    if(!name){toast('스토어명을 입력해주세요.');return;}
+    const split=id=>byId(id).value.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+    const aliases=[...new Set([name,...split('naverStoreAliases')])],sellerIds=split('naverStoreSellerIds');
+    let urlId=byId('naverStoreUrlId').value.trim().replace(/^https?:\/\/smartstore\.naver\.com\//i,'').replace(/\/$/,'');
+    if(urlId&&!/^[a-zA-Z0-9_-]+$/.test(urlId)){toast('스토어 주소는 smartstore.naver.com/ 뒤의 ID를 입력해주세요.');return;}
+    const registry=naverStoreRegistry();
+    if(registry.some(s=>s.name!==name&&(normText(s.name)===normText(name)||s.aliases.some(a=>aliases.some(b=>normText(a)===normText(b)))||s.sellerIds.some(a=>sellerIds.includes(a))))){toast('다른 스토어와 이름·인식 키워드 또는 판매자 ID가 겹칩니다. 구분되는 값을 입력해주세요.');return;}
+    const previous=reviewPreferences.__naverStores;
+    reviewPreferences.__naverStores=registry.filter(s=>s.name!==name).concat({name,aliases,urlId,sellerIds});
+    naverStoreSavePending=true;byId('naverStoreSave').disabled=true;
+    try{await saveLocalData();renderNaverStoreSettings();toast('스토어 설정을 저장했습니다. 파일명에 스토어명이나 인식 키워드를 넣어 업로드하세요.');}
+    catch(error){if(previous)reviewPreferences.__naverStores=previous;else delete reviewPreferences.__naverStores;toast('스토어 설정 저장 실패 · '+cloudError(error));}
+    finally{naverStoreSavePending=false;byId('naverStoreSave').disabled=false;}
+}
+const originalOrderShopName=orderShopName;
+orderShopName=function(seller,channel){
+    if(channel==='store'){
+        const matches=naverStoreRegistry().filter(s=>s.sellerIds.includes(String(seller||'').trim()));
+        if(matches.length===1)return matches[0].name;
+    }
+    return originalOrderShopName(seller,channel);
+};
+function setupNaverStoreSettings(){
+    const body=byId('settingsDialog').querySelector('.dialog-body');
+    body.insertAdjacentHTML('afterbegin','<section class="naver-store-settings"><h3>스마트스토어 관리</h3><p>개수 제한 없이 추가할 수 있습니다. 같은 이름으로 저장하면 인식 설정만 변경됩니다. 기존 상품의 소속은 바뀌지 않습니다.</p><div id="naverStoreRegistryList"></div><label>스토어명<input id="naverStoreName" placeholder="예: 새봄캠핑"></label><label>파일명 인식 키워드 · 쉼표로 구분<input id="naverStoreAliases" placeholder="예: 새봄, saebom (스토어명은 자동 포함)"></label><label>스토어 주소 ID · 선택<input id="naverStoreUrlId" placeholder="smartstore.naver.com/ 뒤의 ID (제안서 링크용)"></label><label>주문서 판매자 ID · 선택<input id="naverStoreSellerIds" placeholder="주문 이력 매칭에 사용할 ID, 쉼표로 구분"></label><button id="naverStoreSave" class="ui-btn primary" onclick="saveNaverStoreSetting()">스토어 추가 / 설정 저장</button><p>설정은 DB에 함께 저장됩니다. 다른 PC에서는 새로고침 후 사용할 수 있습니다.</p></section>');
+    const button=document.querySelector('[aria-label="설정 열기"]');button.setAttribute('onclick',"renderNaverStoreSettings();byId('settingsDialog').showModal()");
+}
+setupNaverStoreSettings();
 
 renderAll();
 updateSummary();
