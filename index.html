@@ -131,6 +131,39 @@
 .price-table .sku-identity-card .product-row-actions{margin-top:14px;padding-top:10px;border-top:1px solid #dbe4e9}
 .price-table .sku-identity-card .cost-history{max-width:100%}
 
+/* Local review: prioritize option identity and financial decisions. */
+.registration-compact{gap:10px;padding:12px!important}
+.registration-compact .registration-option{font-size:13px;font-weight:650;color:#183e50;margin-top:7px}
+.registration-finance{padding:9px 11px}
+.registration-details{grid-column:1/-1;border-top:1px solid #e3e9ed;padding-top:7px;font-size:11px;color:#71818b}
+.registration-details>summary{cursor:pointer;width:fit-content;padding:3px 0;color:#59717d}
+.registration-details .registration-id{margin-top:7px}
+.registration-details .registration-shipping{margin-top:6px;padding:0;border:0;font-size:11px}
+.registration-details .listing-history{margin-top:9px}
+.registration-more>summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:11px 13px;background:#f0f5f4;border:1px solid #d4e1dc;border-radius:7px;font-size:12px;font-weight:650;color:#176b59}
+.registration-more small{font-size:11px;font-weight:400;color:#71818b}
+.registration-more>.registration-list{margin-top:8px}
+.registration-more .when-open,.registration-more[open] .when-closed{display:none}
+.registration-more[open] .when-open{display:inline}
+@container(min-width:480px){.registration-compact{grid-template-columns:minmax(0,1fr) 205px;gap:10px 14px}.registration-compact .registration-title-row>div:first-child{width:76px;height:76px}}
+/* On narrower channel columns, keep sale and margin side by side. */
+.registration-finance{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
+.registration-finance .registration-sale{display:flex;flex-direction:column;gap:3px}
+.registration-finance .card-margin{border:0;margin:0;padding:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+@container(min-width:480px){.registration-finance{display:block}.registration-finance .registration-sale{flex-direction:row}.registration-finance .card-margin{border-top:1px solid var(--line);margin-top:9px;padding-top:9px;flex-direction:row;align-items:center}}
+/* Customer-paid shipping stays directly beside the sale information. */
+.registration-finance{row-gap:4px}
+.registration-finance .registration-sale{grid-column:1;grid-row:1}
+.registration-finance .registration-shipping{grid-column:1;grid-row:2;margin-top:1px;display:flex;flex-wrap:wrap;justify-content:flex-start;gap:3px 7px;font-size:11px;line-height:1.5}
+.registration-finance .registration-shipping>span:last-child{text-align:left}
+.registration-finance .card-margin{grid-column:2;grid-row:1 / span 2}
+.registration-details:has(>.listing-history){padding-top:0;border:0}
+@container(min-width:480px){.registration-finance .registration-shipping{margin-top:6px}.registration-finance .card-margin{margin-top:9px}}
+.product-page-link{display:flex;align-items:baseline;gap:7px;min-width:0;margin-top:8px;font-size:11px;color:#176b59;text-decoration:none;line-height:1.6}
+.product-page-link>span:first-child{flex:none;font-weight:650}
+.product-page-link>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
+.product-page-link:hover{color:#104e40}.product-page-missing{margin-top:7px;font-size:11px;color:#71818b}.product-page-missing button{font-size:11px;padding:0}
+
 </style>
 <script>/*!
 
@@ -2518,10 +2551,26 @@ function renderFilters(){
     byId('issueFilters').innerHTML=workspaceView==='review'?[['all','전체'],['missing','연결 누락'],['name','상품명 연결'],['below','역마진'],['orphan','SKU 없는 상품'],['excluded','판매 안 함']].map(([key,label])=>`<button class="${issueFilter===key?'active':''}" onclick="setIssueFilter('${key}')">${label}</button>`).join(''):'';
 }
 function setIssueFilter(filter){issueFilter=filter;currentPage.unmatched=1;renderFilters();renderAll();}
+function productPageLinkHtml(item,channel){
+    const base=item.__parentItem||item;
+    const fields=['상품링크','상품 링크','상품URL','상품 URL','상세페이지 URL','상세페이지URL','URL','링크'];
+    const field=Object.keys(base).find(key=>fields.some(name=>normKey(key)===normKey(name))&&/^https?:\/\//i.test(String(base[key]||'').trim()));
+    let url=field?String(base[field]).trim():'';
+    if(!url&&channel==='store'){
+        const seller=naverUrlId(base.__shopName),id=exactVal(base,C.storeId);
+        if(seller&&id)url='https://smartstore.naver.com/'+encodeURIComponent(seller)+'/products/'+encodeURIComponent(id);
+    }
+    if(!url&&channel==='coupang'){
+        const id=exactVal(base,C.coupangProductId),option=exactVal(base,C.coupangOptionId);
+        if(id)url='https://www.coupang.com/vp/products/'+encodeURIComponent(id)+(option?'?vendorItemId='+encodeURIComponent(option):'');
+    }
+    if(!url)return '<div class="product-page-missing">'+(channel==='store'?'<button type="button" class="text-action" onclick="renderNaverStoreSettings();byId(&quot;settingsDialog&quot;).showModal()">상품 URL · 스토어 주소 설정 필요</button>':'상품 URL 정보 없음')+'</div>';
+    return '<a class="product-page-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(url)+'" aria-label="상품 페이지 열기: '+esc(url)+'"><span>상품 페이지 ↗</span><span>'+esc(url)+'</span></a>';
+}
 function priceCell(items,channel,excluded,sku=null){
     items=uniqueAdditionalRegistrations(items);
     if(!items.length)return `<div class="registration-empty">${excluded?'판매 안 함으로 설정':'연결된 등록 정보 없음'}</div>`;
-    return `<div class="registration-count">연결 ${items.length.toLocaleString()}건</div><div class="registration-list">`+items.map(item=>{
+    const cards=items.map(item=>{
         const store=channel==='store';
         const extra=store&&item.__isAdditionalProduct;
         const parentName=store?val(item,C.storeName):val(item,C.coupangDisplayName)||val(item,C.coupangRegName);
@@ -2534,9 +2583,10 @@ function priceCell(items,channel,excluded,sku=null){
         const thumbnailItem=extra?(item.__parentItem||item):item;
         const thumbnail=store&&/^https?:\/\//i.test(String(exactVal(thumbnailItem,C.storeImage)||'').trim())?storeThumbnailHtml(thumbnailItem):'';
         const title=thumbnail?'<div class="registration-title-row">'+thumbnail+'<div class="registration-name">'+esc(name||'등록 상품명 없음')+'</div></div>':'<div class="registration-name">'+esc(name||'등록 상품명 없음')+'</div>';
-        return `<div class="registration-item registration-compact"><div class="registration-info">${listingShopHtml(item,channel)}${!store&&coupangFulfillment(item)==='growth'?'<span class="rocket-growth-badge" title="바코드: '+esc(exactVal(item,C.coupangBarcode))+'">로켓그로스</span>':''}${extra?'<div class="registration-parent-name"><span>등록 페이지</span>'+esc(parentName||'상품명 없음')+'</div>':''}${title}<div class="registration-option">${extra?'추가상품 · ':''}${esc(option||'옵션 정보 없음')}</div><div class="registration-id">상품 ${esc(id||'번호 없음')}${optionId?' · 옵션 '+esc(optionId):''}</div></div><div class="registration-finance"><div class="registration-sale"><span>판매가</span><strong class="registration-price">${price}</strong></div><div class="registration-shipping"><span>고객 배송비</span><span>${esc(shippingLabel(extra?(item.__parentItem||item):item,channel))}</span></div>${cardMarginHtml(item,channel,sku)}${listingPriceHistoryHtml(item,channel)}</div></div>`;
+        return `<div class="registration-item registration-compact"><div class="registration-info">${listingShopHtml(item,channel)}${!store&&coupangFulfillment(item)==='growth'?'<span class="rocket-growth-badge" title="바코드: '+esc(exactVal(item,C.coupangBarcode))+'">로켓그로스</span>':''}${extra?'<div class="registration-parent-name"><span>등록 페이지</span>'+esc(parentName||'상품명 없음')+'</div>':''}${title}<div class="registration-option">${extra?'추가상품 · ':''}${esc(option||'옵션 정보 없음')}</div><div class="registration-id">상품코드 ${esc(id||'번호 없음')} · 옵션코드 ${esc(optionId||'번호 없음')}</div>${productPageLinkHtml(item,channel)}</div><div class="registration-finance"><div class="registration-sale"><span>판매가</span><strong class="registration-price">${price}</strong></div><div class="registration-shipping"><span>고객 배송비</span><span>${esc(shippingLabel(extra?(item.__parentItem||item):item,channel))}</span></div>${cardMarginHtml(item,channel,sku)}</div>${listingPriceHistoryHtml(item,channel)?'<div class="registration-details">'+listingPriceHistoryHtml(item,channel)+'</div>':''}</div>`;
 
-    }).join('')+'</div>';
+    });
+    return `<div class="registration-count">연결 ${items.length.toLocaleString()}건</div><div class="registration-list">`+cards.slice(0,2).join('')+(cards.length>2?'<details class="registration-more"><summary><span class="when-closed">나머지 '+(cards.length-2)+'개 펼치기</span><span class="when-open">추가 상품 접기</span><small>전체 '+cards.length+'개</small></summary><div class="registration-list">'+cards.slice(2).join('')+'</div></details>':'')+'</div>';
 }
 function channelRegistrationCell(group,channel,excluded){
     const items=channel==='store'?group.storeItems:group.coupangItems;
