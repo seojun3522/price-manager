@@ -171,6 +171,22 @@
 .candidate-product-row>div:first-child img{width:100%;height:100%;object-fit:contain}
 .candidate-product-row .candidate-heading{min-width:0;align-items:flex-start;line-height:1.6}
 @media(min-width:1000px){#manualDialog[data-channel] .candidate-product-row>div:first-child{width:120px;height:120px;flex-basis:120px}#manualDialog[data-channel] .candidate-heading strong{font-size:14px}}
+/* Use the full row: recognizable image left, decision information right. */
+.candidate-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:center;min-width:0;width:100%}
+.candidate-layout.has-image{grid-template-columns:96px minmax(0,1fr)}
+.candidate-image{width:96px;height:96px;align-self:center}
+.candidate-image>div{width:100%;height:100%;background:#fff}
+.candidate-image img{width:100%;height:100%;object-fit:contain}
+.candidate-body{display:flex;flex-direction:column;gap:5px;min-width:0}
+.candidate-topline{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px}
+.candidate-topline .listing-shop{margin:0;font-size:11px}
+.candidate-body .candidate-heading{width:100%;min-width:0;align-items:baseline;gap:16px;line-height:1.5}
+.candidate-heading strong{min-width:0;overflow-wrap:anywhere}
+.candidate-heading b{flex:none;font-size:16px}
+.candidate-option{font-size:13px;font-weight:600;color:#274d5b;line-height:1.5}
+.candidate-body .product-page-link{margin-top:0}
+.candidate-body .candidate-owner{font-size:11px;line-height:1.5}
+@media(min-width:1000px){#manualDialog[data-channel] .candidate-layout.has-image{grid-template-columns:132px minmax(0,1fr);gap:18px}#manualDialog[data-channel] .candidate-image{width:132px;height:132px}#manualDialog[data-channel] .candidate-card{padding:13px 15px}#manualDialog[data-channel] .candidate-heading strong{font-size:14px}}
 
 </style>
 <script>/*!
@@ -3528,13 +3544,13 @@ renderManualSearch=function(type){
         const optionId=val(e.item,store?C.storeOptionId:C.coupangOptionId);
         const checked=manualChecked[type].has(e.key);
         const thumbnail=store&&/^https?:\/\//i.test(String(exactVal(e.item,C.storeImage)||'').trim())?storeThumbnailHtml(e.item):'';
-        const heading=thumbnail?'<div class="candidate-product-row">'+thumbnail+'<span class="candidate-heading"><strong>'+esc(e.name||'상품명 없음')+'</strong><b>'+(price!==''&&price!=null?toNum(price).toLocaleString()+'원':'가격 정보 없음')+'</b></span></div>':'<span class="candidate-heading"><strong>'+esc(e.name||'상품명 없음')+'</strong><b>'+(price!==''&&price!=null?toNum(price).toLocaleString()+'원':'가격 정보 없음')+'</b></span>';
-        return '<label class="candidate-card '+(checked?'candidate-selected':'')+'"><span class="candidate-select"><input type="checkbox" aria-label="'+esc(e.name+' '+e.option)+' 선택" '+(checked?'checked':'')+' onchange="toggleManualChecked(\''+type+'\','+e.index+',this.checked)"> '+(owner.same?'<span class="candidate-connected-button">연결됨</span>':checked?'선택됨':'선택')+'</span>'+
-            listingShopHtml(e.item,type)+heading+
-            '<span>'+esc(e.option||'옵션 정보 없음')+'</span><small>상품 '+esc(id||'—')+' · 옵션 '+esc(optionId||'—')+'</small>'+
+        const heading='<span class="candidate-heading"><strong>'+esc(e.name||'상품명 없음')+'</strong><b>'+(price!==''&&price!=null?toNum(price).toLocaleString()+'원':'가격 정보 없음')+'</b></span>';
+        return '<label class="candidate-card '+(checked?'candidate-selected':'')+'"><div class="candidate-layout '+(thumbnail?'has-image':'')+'">'+(thumbnail?'<div class="candidate-image">'+thumbnail+'</div>':'')+'<div class="candidate-body"><div class="candidate-topline"><span class="candidate-select"><input type="checkbox" aria-label="'+esc(e.name+' '+e.option)+' 선택" '+(checked?'checked':'')+' onchange="toggleManualChecked(\''+type+'\','+e.index+',this.checked)"> '+(owner.same?'<span class="candidate-connected-button">연결됨</span>':checked?'선택됨':'선택')+'</span>'+listingShopHtml(e.item,type)+'</div>'+heading+
+            '<span class="candidate-option">'+esc(e.option||'옵션 정보 없음')+'</span><small>상품 '+esc(id||'—')+' · 옵션 '+esc(optionId||'—')+'</small>'+
             productPageLinkHtml(e.item,type)+
             '<span class="candidate-badges">'+(score>0&&!owner.other?'<span class="recommend-match">추천 매칭</span>':'')+(reason?'<span class="candidate-reason">'+esc(reason)+'</span>':'')+(!store&&coupangFulfillment(e.item)==='growth'?'<span class="rocket-growth-badge">로켓그로스</span>':'')+'</span>'+
-            '<span class="candidate-owner '+(owner.other?'candidate-other':'')+'">'+esc(owner.text)+(owner.same?' · 이 SKU에 연결됨':owner.other?' · 다른 SKU에 연결됨':'')+'</span></label>';
+            '<span class="candidate-owner '+(owner.other?'candidate-other':'')+'">'+esc(owner.text)+(owner.same?' · 이 SKU에 연결됨':owner.other?' · 다른 SKU에 연결됨':'')+'</span></div></div></label>';
+
     }).join('')+(!results.length?'<p class="p-3">'+(manualSourceRows(type).length?'관련 상품이 없습니다. 상품명이나 상품번호로 검색해주세요.':'먼저 해당 엑셀을 업로드해주세요.')+'</p>':'')+manualSearchPagerHtml(type,results.length,start,shown.length,pages);
 };
 moveManualSearchPage=function(type,action){
