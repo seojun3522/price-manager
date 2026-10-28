@@ -163,6 +163,7 @@
 .product-page-link>span:first-child{flex:none;font-weight:650}
 .product-page-link>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
 .product-page-link:hover{color:#104e40}.product-page-missing{margin-top:7px;font-size:11px;color:#71818b}.product-page-missing button{font-size:11px;padding:0}
+.naver-product-assignment:not([hidden]){display:block;background:#edf6f1;border:1px solid #bdd8cc;border-radius:8px;padding:14px;margin-bottom:18px}.naver-product-assignment select{border:1px solid #bdd8cc;background:white;border-radius:6px;padding:8px;min-width:160px;margin-right:8px}.naver-product-assignment strong{font-size:15px}
 
 </style>
 <script>/*!
@@ -2564,7 +2565,7 @@ function productPageLinkHtml(item,channel){
         const id=exactVal(base,C.coupangProductId),option=exactVal(base,C.coupangOptionId);
         if(id)url='https://www.coupang.com/vp/products/'+encodeURIComponent(id)+(option?'?vendorItemId='+encodeURIComponent(option):'');
     }
-    if(!url)return '<div class="product-page-missing">'+(channel==='store'?'<button type="button" class="text-action" onclick="renderNaverStoreSettings();byId(&quot;settingsDialog&quot;).showModal()">상품 URL · 스토어 주소 설정 필요</button>':'상품 URL 정보 없음')+'</div>';
+    if(!url)return '<div class="product-page-missing">'+(channel==='store'?'<button type="button" class="text-action" data-store-key="'+esc(encodeURIComponent(manualSourceKey('store',base)))+'" onclick="openNaverProductStore(decodeURIComponent(this.dataset.storeKey))">상품 URL · 스토어 주소 설정 필요</button>':'상품 URL 정보 없음')+'</div>';
     return '<a class="product-page-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(url)+'" aria-label="상품 페이지 열기: '+esc(url)+'"><span>상품 페이지 ↗</span><span>'+esc(url)+'</span></a>';
 }
 function priceCell(items,channel,excluded,sku=null){
@@ -4025,13 +4026,61 @@ function naverStoreRegistry(){
     return [...map.values()];
 }
 function naverUrlId(name){return naverStoreRegistry().find(s=>s.name===name)?.urlId||'';}
+let naverProductContext=null;
+function openNaverProductStore(key){
+    const item=rawStoreData.find(row=>manualSourceKey('store',row)===key);
+    if(!item){toast('상품을 찾을 수 없습니다. 화면을 새로고침해주세요.');return;}
+    naverProductContext={key,product:String(val(item,C.storeId)),shop:item.__shopName||''};
+    renderNaverStoreSettings();
+    if(item.__shopName)editNaverStore(item.__shopName);
+    byId('settingsDialog').showModal();
+}
+function prepareNaverProductStore(name){
+    if(!naverProductContext)return null;
+    const context=naverProductContext;
+    if(!context.product)throw new Error('상품번호가 없어 스토어를 지정할 수 없습니다.');
+    const before=rawStoreData,beforeMatches=manualMatches,keyMap=new Map();
+    const next=before.map(row=>{
+        if(String(val(row,C.storeId))!==context.product||(row.__shopName||'')!==context.shop)return row;
+        const updated={...row,__shopName:name};
+        keyMap.set(manualSourceKey('store',row),manualSourceKey('store',updated));return updated;
+    });
+    if(!keyMap.size)throw new Error('지정할 상품을 찾을 수 없습니다.');
+    const keys=next.map(row=>manualSourceKey('store',row));
+    if(new Set(keys).size!==keys.length)throw new Error('같은 스토어에 동일한 상품·옵션이 이미 있습니다. 원본 상품을 확인해주세요.');
+    rawStoreData=next;
+    manualMatches=beforeMatches.map(match=>({...match,storeKey:keyMap.get(match.storeKey)||match.storeKey}));
+    return {rollback(){rawStoreData=before;manualMatches=beforeMatches;},name};
+}
+function finishNaverProductStore(change){
+    if(change){
+        naverProductContext.shop=change.name;
+        const item=rawStoreData.find(row=>String(val(row,C.storeId))===naverProductContext.product&&row.__shopName===change.name);
+        if(item)naverProductContext.key=manualSourceKey('store',item);
+        manualLookupCache.clear();expandedManualStoreCacheSource=null;buildIntegrated();
+    }
+    renderNaverStoreSettings();renderAll();updateSummary();
+}
+async function applyNaverProductStore(){
+    if(naverStoreSavePending)return;
+    const name=byId('naverProductStoreSelect').value;
+    if(!name||!naverStoreRegistry().some(s=>s.name===name)){toast('이 상품의 스토어를 선택해주세요.');return;}
+    let change;
+    naverStoreSavePending=true;byId('naverProductStoreApply').disabled=true;
+    try{change=prepareNaverProductStore(name);await saveLocalData();finishNaverProductStore(change);toast('상품의 스토어와 URL을 반영했습니다.');byId('settingsDialog').close();}
+    catch(error){change?.rollback();toast('스토어 지정 실패 · '+cloudError(error));}
+    finally{naverStoreSavePending=false;byId('naverProductStoreApply').disabled=false;}
+}
 function renderNaverStoreSettings(){
     const target=byId('naverStoreRegistryList');if(!target)return;
     target.innerHTML=naverStoreRegistry().map(s=>'<div class="store-config-row"><div><strong>'+esc(s.name)+'</strong><small>파일명: '+esc([...new Set(s.aliases)].join(', '))+'</small></div><button class="ui-btn" type="button" data-store="'+esc(s.name)+'" onclick="editNaverStore(this.dataset.store)">설정</button></div>').join('');
+    const assignment=byId('naverProductStoreAssignment');
+    if(assignment){assignment.hidden=!naverProductContext;assignment.innerHTML=naverProductContext?'<strong>이 상품의 스토어 지정</strong><p>상품번호 '+esc(naverProductContext.product)+' · 같은 등록 페이지의 옵션에 함께 적용됩니다.</p><select id="naverProductStoreSelect" aria-label="이 상품의 스토어"><option value="">스토어 선택</option>'+naverStoreRegistry().map(s=>'<option value="'+esc(s.name)+'" '+(s.name===naverProductContext.shop?'selected':'')+'>'+esc(s.name)+'</option>').join('')+'</select><button id="naverProductStoreApply" class="ui-btn primary" onclick="applyNaverProductStore()">이 상품에 적용</button>':'';}
 }
 function editNaverStore(name){
     const s=naverStoreRegistry().find(s=>s.name===name);if(!s)return;
     byId('naverStoreName').value=s.name;byId('naverStoreAliases').value=s.aliases.filter(a=>a!==s.name).join(', ');byId('naverStoreUrlId').value=s.urlId;byId('naverStoreSellerIds').value=s.sellerIds.join(', ');
+    if(naverProductContext)byId('naverProductStoreSelect').value=s.name;
 }
 let naverStoreSavePending=false;
 async function saveNaverStoreSetting(){
@@ -4047,8 +4096,9 @@ async function saveNaverStoreSetting(){
     const previous=reviewPreferences.__naverStores;
     reviewPreferences.__naverStores=registry.filter(s=>s.name!==name).concat({name,aliases,urlId,sellerIds});
     naverStoreSavePending=true;byId('naverStoreSave').disabled=true;
-    try{await saveLocalData();renderNaverStoreSettings();toast('스토어 설정을 저장했습니다. 파일명에 스토어명이나 인식 키워드를 넣어 업로드하세요.');}
-    catch(error){if(previous)reviewPreferences.__naverStores=previous;else delete reviewPreferences.__naverStores;toast('스토어 설정 저장 실패 · '+cloudError(error));}
+    let change;
+    try{change=prepareNaverProductStore(name);await saveLocalData();finishNaverProductStore(change);toast(change?'이 상품의 스토어와 URL을 반영했습니다.':'스토어 설정을 저장하고 상품 URL을 갱신했습니다.');}
+    catch(error){change?.rollback();if(previous)reviewPreferences.__naverStores=previous;else delete reviewPreferences.__naverStores;toast('스토어 설정 저장 실패 · '+cloudError(error));}
     finally{naverStoreSavePending=false;byId('naverStoreSave').disabled=false;}
 }
 const originalOrderShopName=orderShopName;
@@ -4061,8 +4111,9 @@ orderShopName=function(seller,channel){
 };
 function setupNaverStoreSettings(){
     const body=byId('settingsDialog').querySelector('.dialog-body');
-    body.insertAdjacentHTML('afterbegin','<section class="naver-store-settings"><h3>스마트스토어 관리</h3><p>개수 제한 없이 추가할 수 있습니다. 같은 이름으로 저장하면 인식 설정만 변경됩니다. 기존 상품의 소속은 바뀌지 않습니다.</p><div id="naverStoreRegistryList"></div><label>스토어명<input id="naverStoreName" placeholder="예: 새봄캠핑"></label><label>파일명 인식 키워드 · 쉼표로 구분<input id="naverStoreAliases" placeholder="예: 새봄, saebom (스토어명은 자동 포함)"></label><label>스토어 주소 ID · 선택<input id="naverStoreUrlId" placeholder="smartstore.naver.com/ 뒤의 ID (제안서 링크용)"></label><label>주문서 판매자 ID · 선택<input id="naverStoreSellerIds" placeholder="주문 이력 매칭에 사용할 ID, 쉼표로 구분"></label><button id="naverStoreSave" class="ui-btn primary" onclick="saveNaverStoreSetting()">스토어 추가 / 설정 저장</button><p>설정은 DB에 함께 저장됩니다. 다른 PC에서는 새로고침 후 사용할 수 있습니다.</p></section>');
-    const button=document.querySelector('[aria-label="설정 열기"]');button.setAttribute('onclick',"renderNaverStoreSettings();byId('settingsDialog').showModal()");
+    body.insertAdjacentHTML('afterbegin','<section class="naver-store-settings"><h3>스마트스토어 관리</h3><p>개수 제한 없이 추가할 수 있습니다. 일반 설정에서는 파일명 인식·주소를 관리합니다. 상품에서 열면 위에서 해당 상품의 스토어를 지정할 수 있습니다.</p><div id="naverStoreRegistryList"></div><label>스토어명<input id="naverStoreName" placeholder="예: 새봄캠핑"></label><label>파일명 인식 키워드 · 쉼표로 구분<input id="naverStoreAliases" placeholder="예: 새봄, saebom (스토어명은 자동 포함)"></label><label>스토어 주소 ID · 선택<input id="naverStoreUrlId" placeholder="smartstore.naver.com/ 뒤의 ID (상품 바로가기·제안서 링크용)"></label><label>주문서 판매자 ID · 선택<input id="naverStoreSellerIds" placeholder="주문 이력 매칭에 사용할 ID, 쉼표로 구분"></label><button id="naverStoreSave" class="ui-btn primary" onclick="saveNaverStoreSetting()">스토어 추가 / 설정 저장</button><p>설정은 DB에 함께 저장됩니다. 다른 PC에서는 새로고침 후 사용할 수 있습니다.</p></section>');
+    body.querySelector('.naver-store-settings').insertAdjacentHTML('afterbegin','<div id="naverProductStoreAssignment" class="naver-product-assignment" hidden></div>');
+    const button=document.querySelector('[aria-label="설정 열기"]');button.setAttribute('onclick',"naverProductContext=null;renderNaverStoreSettings();byId('settingsDialog').showModal()");
 }
 setupNaverStoreSettings();
 
