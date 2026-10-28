@@ -164,6 +164,7 @@
 .product-page-link>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
 .product-page-link:hover{color:#104e40}.product-page-missing{margin-top:7px;font-size:11px;color:#71818b}.product-page-missing button{font-size:11px;padding:0}
 .naver-product-assignment:not([hidden]){display:block;background:#edf6f1;border:1px solid #bdd8cc;border-radius:8px;padding:14px;margin-bottom:18px}.naver-product-assignment select{border:1px solid #bdd8cc;background:white;border-radius:6px;padding:8px;min-width:160px;margin-right:8px}.naver-product-assignment strong{font-size:15px}
+.candidate-card .product-page-link{margin-top:2px;max-width:100%;font-size:11px;cursor:pointer}.candidate-card .product-page-link>span{color:inherit}.candidate-card .product-page-missing .text-action{font-size:11px}
 
 </style>
 <script>/*!
@@ -2566,7 +2567,7 @@ function productPageLinkHtml(item,channel){
         if(id)url='https://www.coupang.com/vp/products/'+encodeURIComponent(id)+(option?'?vendorItemId='+encodeURIComponent(option):'');
     }
     if(!url)return '<div class="product-page-missing">'+(channel==='store'?'<button type="button" class="text-action" data-store-key="'+esc(encodeURIComponent(manualSourceKey('store',base)))+'" onclick="openNaverProductStore(decodeURIComponent(this.dataset.storeKey))">상품 URL · 스토어 주소 설정 필요</button>':'상품 URL 정보 없음')+'</div>';
-    return '<a class="product-page-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(url)+'" aria-label="상품 페이지 열기: '+esc(url)+'"><span>상품 페이지 ↗</span><span>'+esc(url)+'</span></a>';
+    return '<a class="product-page-link" onclick="event.stopPropagation()" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(url)+'" aria-label="상품 페이지 열기: '+esc(url)+'"><span>상품 페이지 ↗</span><span>'+esc(url)+'</span></a>';
 }
 function priceCell(items,channel,excluded,sku=null){
     items=uniqueAdditionalRegistrations(items);
@@ -3525,6 +3526,7 @@ renderManualSearch=function(type){
         return '<label class="candidate-card '+(checked?'candidate-selected':'')+'"><span class="candidate-select"><input type="checkbox" aria-label="'+esc(e.name+' '+e.option)+' 선택" '+(checked?'checked':'')+' onchange="toggleManualChecked(\''+type+'\','+e.index+',this.checked)"> '+(owner.same?'<span class="candidate-connected-button">연결됨</span>':checked?'선택됨':'선택')+'</span>'+
             listingShopHtml(e.item,type)+heading+
             '<span>'+esc(e.option||'옵션 정보 없음')+'</span><small>상품 '+esc(id||'—')+' · 옵션 '+esc(optionId||'—')+'</small>'+
+            productPageLinkHtml(e.item,type)+
             '<span class="candidate-badges">'+(score>0&&!owner.other?'<span class="recommend-match">추천 매칭</span>':'')+(reason?'<span class="candidate-reason">'+esc(reason)+'</span>':'')+(!store&&coupangFulfillment(e.item)==='growth'?'<span class="rocket-growth-badge">로켓그로스</span>':'')+'</span>'+
             '<span class="candidate-owner '+(owner.other?'candidate-other':'')+'">'+esc(owner.text)+(owner.same?' · 이 SKU에 연결됨':owner.other?' · 다른 SKU에 연결됨':'')+'</span></label>';
     }).join('')+(!results.length?'<p class="p-3">'+(manualSourceRows(type).length?'관련 상품이 없습니다. 상품명이나 상품번호로 검색해주세요.':'먼저 해당 엑셀을 업로드해주세요.')+'</p>':'')+manualSearchPagerHtml(type,results.length,start,shown.length,pages);
