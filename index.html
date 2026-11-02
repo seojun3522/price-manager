@@ -2748,11 +2748,14 @@ ORDER_MAPPING_REFERENCE.forEach(record=>{const rows=orderEvidenceByProduct.get(r
 const ORDER_SELLER_SHOPS={
     store:[
         {shop:'제커',matches:['ncp_1nrcs0_01']},
-        {shop:'헬로우캠핑',matches:['jaemanboys']}
+        {shop:'헬로우캠핑',matches:['jaemanboys']},
+        {shop:'헬로앤코',matches:['ncp_1oml8k_01']},
+        {shop:'웰라인',matches:['ncp_1nsz78_01']}
     ],
     coupang:[
         {shop:'마당발',matches:['madangval9','madangval']},
-        {shop:'서준',matches:['jaemanboys','seojun']}
+        {shop:'서준',matches:['jaemanboys','seojun']},
+        {shop:'웰라인',matches:['wellline7']}
     ]
 };
 function orderShopName(seller,channel){
@@ -3577,7 +3580,7 @@ const rebuildCandidateIndexes=buildIntegrated;
 buildIntegrated=function(){candidateIndexes.clear();candidateQueries.clear();candidateOwners=null;return rebuildCandidateIndexes();};
 
 // Keep the most recent three observed price changes with each imported listing.
-const CHANNEL_SHOPS={store:{'제커':['제커','zeker'],'헬로우캠핑':['헬로우캠핑','헬로캠핑']},coupang:{'마당발':['마당발'],'서준':['서준']}};
+const CHANNEL_SHOPS={store:{'제커':['제커','zeker'],'헬로우캠핑':['헬로우캠핑','헬로캠핑'],'헬로앤코':['헬로앤코','헬로엔코'],'웰라인':['웰라인','wellline']},coupang:{'마당발':['마당발'],'서준':['서준'],'웰라인':['웰라인','wellline']}};
 function shopNameFromFilename(filename,knownNames,channel){
     const stem=String(filename||'').replace(/\.(xlsx|xls)$/i,'').normalize('NFKC').trim();
     const known=[...new Set(knownNames||[...rawStoreData,...rawCoupangData].map(r=>r.__shopName).filter(Boolean))];
@@ -4044,9 +4047,9 @@ function refreshManualAssignments(){
 
 // Shared store registry is stored with existing workspace preferences.
 function naverStoreRegistry(){
-    const map=new Map(Object.entries(CHANNEL_SHOPS.store).map(([name,aliases])=>[name,{name,aliases,urlId:name==='제커'?'madangval7':'hellocampingplus',sellerIds:name==='제커'?['ncp_1nrcs0_01']:['jaemanboys']} ]));
+    const map=new Map(Object.entries(CHANNEL_SHOPS.store).map(([name,aliases])=>[name,{name,aliases,urlId:({'제커':'madangval7','헬로우캠핑':'hellocampingplus'})[name]||'',sellerIds:({'제커':['ncp_1nrcs0_01'],'헬로우캠핑':['jaemanboys'],'헬로앤코':['ncp_1oml8k_01'],'웰라인':['ncp_1nsz78_01']})[name]||[]} ]));
     for(const row of rawStoreData||[])if(row.__shopName&&!map.has(row.__shopName))map.set(row.__shopName,{name:row.__shopName,aliases:[row.__shopName],urlId:'',sellerIds:[]});
-    for(const item of reviewPreferences.__naverStores||[])if(item&&typeof item.name==='string'&&item.name.trim())map.set(item.name,{name:item.name,aliases:[item.name,...(Array.isArray(item.aliases)?item.aliases:[])],urlId:item.urlId||'',sellerIds:Array.isArray(item.sellerIds)?item.sellerIds:[]});
+    for(const item of reviewPreferences.__naverStores||[])if(item&&typeof item.name==='string'&&item.name.trim())map.set(item.name,{name:item.name,aliases:[item.name,...(Array.isArray(item.aliases)?item.aliases:[])],urlId:item.urlId||'',sellerIds:Array.isArray(item.sellerIds)&&item.sellerIds.length?item.sellerIds:(map.get(item.name)?.sellerIds||[])});
     return [...map.values()];
 }
 function naverUrlId(name){return naverStoreRegistry().find(s=>s.name===name)?.urlId||'';}
