@@ -2509,7 +2509,7 @@ function setupWorkspace() {
     const oldMetrics = sections[1];
     const oldSearch = sections[2];
     sections[3].classList.add('table-shell');
-    document.querySelector('header').outerHTML = `<header class="appbar"><div class="brand"><span class="brandmark">≋</span>상품 가격 관리 <small>PRODUCT WORKSPACE</small></div><div class="app-actions"><span id="localSaveBadge" role="status">저장 데이터 확인 중</span><button class="ui-btn" onclick="exportExcel()">엑셀 내보내기</button><button class="ui-btn" onclick="byId('settingsDialog').showModal()" aria-label="설정 열기">설정</button></div></header>`;
+    document.querySelector('header').outerHTML = `<header class="appbar"><div class="brand"><span class="brandmark">≋</span>상품 가격 관리 <small>PRODUCT WORKSPACE</small></div><div class="app-actions"><span id="localSaveBadge" role="status">저장 데이터 확인 중</span><button class="ui-btn primary" onclick="exportCurrentTableExcel()" title="현재 탭의 검색·필터·정렬을 적용한 전체 페이지 다운로드">현재 목록 엑셀</button><button class="ui-btn" onclick="exportExcel()">전체 데이터 엑셀</button><button class="ui-btn" onclick="byId('settingsDialog').showModal()" aria-label="설정 열기">설정</button></div></header>`;
     main.insertAdjacentHTML('afterbegin', `<div class="page-heading"><div><div class="eyebrow">PRICING OVERVIEW</div><h1 id="viewTitle">상품별 가격 비교</h1><p id="viewDescription">원가와 채널별 판매가를 한곳에서 확인하세요.</p></div><button class="ui-btn primary" onclick="showImport()">+ 파일 불러오기</button></div>`);
     const panel = document.createElement('details');
     panel.id = 'importPanel'; panel.className = 'import-panel'; panel.open = true;
@@ -2575,7 +2575,7 @@ function renderFilters(){
     byId('issueFilters').innerHTML=workspaceView==='review'?[['all','전체'],['missing','연결 누락'],['name','상품명 연결'],['below','역마진'],['orphan','SKU 없는 상품'],['excluded','판매 안 함']].map(([key,label])=>`<button class="${issueFilter===key?'active':''}" onclick="setIssueFilter('${key}')">${label}</button>`).join(''):'';
 }
 function setIssueFilter(filter){issueFilter=filter;currentPage.unmatched=1;renderFilters();renderAll();}
-function productPageLinkHtml(item,channel){
+function productPageUrl(item,channel){
     const base=item.__parentItem||item;
     const fields=['상품링크','상품 링크','상품URL','상품 URL','상세페이지 URL','상세페이지URL','URL','링크'];
     const field=Object.keys(base).find(key=>fields.some(name=>normKey(key)===normKey(name))&&/^https?:\/\//i.test(String(base[key]||'').trim()));
@@ -2588,6 +2588,10 @@ function productPageLinkHtml(item,channel){
         const id=exactVal(base,C.coupangProductId),option=exactVal(base,C.coupangOptionId);
         if(id)url='https://www.coupang.com/vp/products/'+encodeURIComponent(id)+(option?'?vendorItemId='+encodeURIComponent(option):'');
     }
+    return url;
+}
+function productPageLinkHtml(item,channel){
+    const base=item.__parentItem||item,url=productPageUrl(item,channel);
     if(!url)return '<div class="product-page-missing">'+(channel==='store'?'<button type="button" class="text-action" data-store-key="'+esc(encodeURIComponent(manualSourceKey('store',base)))+'" onclick="openNaverProductStore(decodeURIComponent(this.dataset.storeKey))">상품 URL · 스토어 주소 설정 필요</button>':'상품 URL 정보 없음')+'</div>';
     return '<a class="product-page-link" onclick="event.stopPropagation()" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(url)+'" aria-label="상품 페이지 열기: '+esc(url)+'"><span>상품 페이지 ↗</span><span>'+esc(url)+'</span></a>';
 }
@@ -4143,6 +4147,80 @@ function setupNaverStoreSettings(){
     const button=document.querySelector('[aria-label="설정 열기"]');button.setAttribute('onclick',"naverProductContext=null;renderNaverStoreSettings();byId('settingsDialog').showModal()");
 }
 setupNaverStoreSettings();
+
+// Export the same filtered, sorted row set used by the visible table, before pagination.
+function currentTableExportRows(type=activeTab){
+    const rows=sortRows(type,filterRows(type,getTabRows(type)));
+    const output=[],seenAdditional=new Set();
+    for(const row of rows){
+        if(type==='sku'){
+            output.push({'DB코드':String(val(row,C.skuDb)||''),'SKU 코드':String(val(row,C.skuCode)||''),'상품명':val(row,C.skuName),'바코드':String(val(row,C.skuBarcode)||''),'매입원가':num(row,C.skuCost),'공급가':num(row,C.skuSupply)});
+        }else if(type==='store'||type==='coupang'){
+            output.push(exportListingFields(row,type,null));
+            if(type==='store'){
+                // Source view also shows the additional products beneath each registration.
+                const key=JSON.stringify([val(row,C.storeId),val(row,C.storeSku),val(row,C.storeName)]);
+                if(!seenAdditional.has(key)){
+                    seenAdditional.add(key);
+                    const extras=additionalProducts(row).map((product,index)=>exportListingFields(makeAdditionalManualItem(row,product,index),'store',null));
+                    output.push(...extras);
+                }
+            }
+        }else{
+            const sku=row.skuItem;
+            const stores=uniqueAdditionalRegistrations(row.storeItems||(row.storeItem?[row.storeItem]:[]));
+            const coupangs=uniqueAdditionalRegistrations(row.coupangItems||(row.coupangItem?[row.coupangItem]:[]));
+            const notes=type==='matched'?'':row.orphan?'SKU 연결 없음':issuesFor(row).map(issue=>issue.text).join(' · ')||'확인 완료';
+            for(let index=0;index<Math.max(1,stores.length,coupangs.length);index++){
+                output.push({'SKU 코드':String(sku?val(sku,C.skuCode):row.skuCode||''),'상품명':sku?val(sku,C.skuName):row.skuName||'','매입원가':sku?num(sku,C.skuCost):'','SKU 바코드':String(sku?val(sku,C.skuBarcode)||'':''),
+                    ...exportListingFields(stores[index],'store',sku),...exportListingFields(coupangs[index],'coupang',sku),'확인사항':notes});
+            }
+        }
+    }
+    return {rows:output,count:rows.length};
+}
+function exportListingFields(item,channel,sku){
+    const store=channel==='store',prefix=store?'네이버 ':'쿠팡 ';
+    const base=item?.__parentItem||item,extra=!!item?.__isAdditionalProduct;
+    const title=item?(store?val(base,C.storeName):val(item,C.coupangDisplayName)||val(item,C.coupangRegName)):'';
+    const name=extra?(item.__additionalProduct.name||item.__additionalProduct.value):title;
+    const option=item?(extra?additionalProductLabel(item):store?val(item,C.storeOptionLabel)||val(item,C.storeOptionValue):val(item,C.coupangOptionName)):'';
+    const margin=calculateOptionMargin(item,channel,sku);
+    const rawPrice=item?(store?(extra?item.__additionalProduct.price:(val(item,C.storeFinalPrice)!==''?val(item,C.storeFinalPrice):val(item,C.storePrice))):val(item,C.coupangPrice)):'';
+    const price=rawPrice===''||rawPrice===null||rawPrice===undefined?'':(store?storeSalePrice(item):num(item,C.coupangPrice));
+    const data={'스토어':base?.__shopName||'','상품명':name||'','등록 페이지명':extra?title:'','옵션명':option||'',
+        '상품코드':String(item?(store?val(base,C.storeId):val(item,C.coupangProductId)||val(item,C.coupangId))||'':''),
+        '옵션코드':String(item?(store?val(item,C.storeOptionId):val(item,C.coupangOptionId))||'':''),
+        '판매자 SKU 코드':String(item?val(item,store?C.storeSku:C.coupangSku)||'':''),
+        '판매가':price,'고객 배송비':item?shippingLabel(base,channel):'',
+        '예상 마진액':margin.status==='ok'?Math.round(margin.amount):'',
+        '마진율(%)':margin.status==='ok'?Number(margin.rate.toFixed(1)):'',
+        '마진 상태':!item?'':margin.status==='growth'?'그로스(계산제외)':margin.status==='ok'?(margin.amount<=0?'역마진':margin.rate<10?'10% 미만':'정상'):margin.reason||'',
+        '상품 URL':item?productPageUrl(item,channel):''};
+    if(store){data['이미지 URL']=item?String(exactVal(base,C.storeImage)||''):'';data['재고수량']=item?(val(item,C.storeOptionStock)!==''?val(item,C.storeOptionStock):val(item,C.storeStock)):'';}
+    else{data['등록상품ID']=String(item?val(item,C.coupangId)||'':'');data['등록상품명']=item?val(item,C.coupangRegName):'';data['바코드']=String(item?exactVal(item,C.coupangBarcode)||'':'');data['배송구분']=item?(coupangFulfillment(item)==='growth'?'로켓그로스':'일반배송'):'';}
+    return Object.fromEntries(Object.entries(data).map(([key,value])=>[prefix+key,value]));
+}
+function exportCurrentTableExcel(){
+    if(typeof XLSX==='undefined'){toast('엑셀 기능을 불러오지 못했습니다.');return;}
+    // Include even the last keystroke if the user clicks before the debounce fires.
+    clearTimeout(searchTimer);searchTerm=byId('searchInput').value.toLowerCase().trim();
+    renderAll();
+    const result=currentTableExportRows();
+    if(!result.rows.length){toast('현재 검색·필터 조건에 해당하는 목록이 없습니다.');return;}
+    const label=({integrated:'가격비교',unmatched:'확인필요',matched:'SKU매칭현황',sku:'SKU원가',store:'네이버원본',coupang:'쿠팡원본'})[activeTab]||'현재목록';
+    const sheet=XLSX.utils.json_to_sheet(result.rows),headers=Object.keys(result.rows[0]);
+    sheet['!cols']=headers.map(key=>({wch:/상품명|페이지명|옵션명|고객 배송비|확인사항/.test(key)?38:/URL/.test(key)?48:/코드|바코드/.test(key)?23:18}));
+    sheet['!autofilter']={ref:sheet['!ref']};
+    for(let i=0;i<result.rows.length;i++)for(let j=0;j<headers.length;j++){
+        const key=headers[j],cell=sheet[XLSX.utils.encode_cell({r:i+1,c:j})];if(!cell)continue;
+        if(cell.t==='n')cell.z=/마진율/.test(key)?'0.0"%"':(/원가|공급가|판매가|마진액/.test(key)?'#,##0"원"':'0');
+        if(/URL$/.test(key)&&/^https?:\/\//i.test(String(cell.v)))cell.l={Target:String(cell.v)};
+    }
+    const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,sheet,label);
+    XLSX.writeFile(workbook,'현재목록_'+label+'_'+today()+'.xlsx',{bookType:'xlsx'});
+    toast('현재 검색·필터의 전체 목록 '+result.count.toLocaleString()+'개를 엑셀 '+result.rows.length.toLocaleString()+'행으로 다운로드했습니다.');
+}
 
 renderAll();
 updateSummary();
